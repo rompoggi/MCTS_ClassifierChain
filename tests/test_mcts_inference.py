@@ -1,16 +1,17 @@
 import pytest
 from mcts_inference.mcts import Constraint as Constraint
 
-def test_constraint_initialization():
+
+def test_constraint_initialization() -> None:
     pass
 
-def test_constraint_bool():
-    # Initialize a Constraint object
-    constraint = Constraint(time=True,d_time=1,verbose=True)  
+
+def test_constraint_bool() -> None:
+    constraint = Constraint(time=True, d_time=1, verbose=True)
 
     result = bool(constraint)
 
-    assert result == True 
+    assert (result is True)
 
 
 # def test_empty_slap():
@@ -35,14 +36,14 @@ def test_constraint_bool():
 #     assert slap_many(LikeState.empty, test_input) is expected
 
 
-# @pytest.mark.skip(reason="regexes not supported yet")
-# def test_regex_slaps():
-#     assert slap_many(LikeState.empty, '[ld]*ddl') is LikeState.liked
+@pytest.mark.skip(reason="example skip")
+def test_skip() -> None:
+    assert (True is False)
 
 
-# @pytest.mark.xfail
-# def test_divide_by_zero():
-#     assert 1 / 0 == 1
+@pytest.mark.xfail
+def test_divide_by_zero() -> None:
+    assert 1 / 0 == 1
 
 
 # def test_invalid_slap():
