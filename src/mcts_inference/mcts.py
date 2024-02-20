@@ -1,23 +1,55 @@
 import numpy as np
-from sklearn.datasets import make_multilabel_classification
-from sklearn.model_selection import train_test_split
 from enum import Enum
 from typing import Optional, Any, Dict, Callable, List, TypeVar
+from time import time
+
+from sklearn.datasets import make_multilabel_classification
+from sklearn.model_selection import train_test_split
 from sklearn.multioutput import ClassifierChain
 from sklearn.linear_model import LogisticRegression
-from time import time
 
 
 np.set_printoptions(precision=3)
 
 
-class NormOpt(Enum):
-    SOFTMAX = 1
-    UNIFORM = 2
-    NONE = 3
-
-
 class Constraint:
+    """
+    Constraint class to handle the time and iteration constraints.
+    It is used for the MCTS algorithm to stop the search when the time or iteration constraints are reached.
+
+    Args:
+        time (bool): If True, the time constraint is activated
+        max_iter (bool): If True, the iteration constraint is activated
+        d_time (float): The time constraint in seconds
+        n_iter (int): The iteration constraint
+        verbose (bool): If True, the constraints will print a message when they are reached
+
+    Methods:
+        reset(self) -> None: Reset the constraints to their initial state
+        _bool_time(self) -> bool: Check the time constraint
+        _bool_iter(self) -> bool: Check the iteration constraint
+        __bool__(self) -> bool: Returns True if the constraints are satisfied, False otherwise
+
+    Raises:
+        AssertionError: If both time and max_iter are False
+        AssertionError: If max_iter is True and n_iter is not a positive integer
+        AssertionError: If time is True and d_time is not a positive float
+
+    Examples:
+        >>> c = Constraint(time=True, d_time=1., max_iter=False, n_iter=0, verbose=True)
+        >>> bool(c)
+        True
+        >>> c = Constraint(time=False, d_time=1., max_iter=True, n_iter=100, verbose=True)
+        >>> bool(c)
+        True
+        >>> c = Constraint(time=True, d_time=1., max_iter=True, n_iter=100, verbose=True)
+        >>> bool(c)
+        True
+        >>> c.curr_iter == 1
+        True
+        >>> c = Constraint(time=False, d_time=1., max_iter=False, n_iter=0, verbose=True)
+        AssertionError: At least time=False or max_iter=False should be True
+    """
     def __init__(self, time: bool = False, max_iter: bool = False, d_time: float = 1., n_iter: int = 100, verbose: bool = False) -> None:
         assert (time or max_iter), f"At least {time=} or {max_iter=} should be True"
         assert (not max_iter or (isinstance(n_iter, int) and n_iter > 0)), f"{n_iter=} should be positive if {max_iter=}"
@@ -36,17 +68,30 @@ class Constraint:
         self.verbose: bool = verbose
 
     def reset(self) -> None:
+        """
+        Reset the constraints to their initial state
+        """
         self.end_time = time() + self.d_time
         self.curr_iter = -1
 
     def _bool_time(self) -> bool:
+        """
+        Check the time constraint
+        """
         return (not self.time or self.end_time >= time())
 
     def _bool_iter(self) -> bool:
+        """
+        Check the iteration constraint
+        """
         self.curr_iter += 1
         return (not self.max_iter or self.curr_iter < self.n_iter)
 
     def __bool__(self) -> bool:
+        """
+        Returns True if the constraints are satisfied, False otherwise
+        It updates the current iteration and time based on the options
+        """
         if self.verbose:  # verbose
             bt: bool = self._bool_time()
             bi: bool = self._bool_iter()
@@ -59,11 +104,83 @@ class Constraint:
             return True
         return self._bool_time() and self._bool_iter()
 
+    def __str__(self) -> str:
+        """
+        String representation of the constraint
+        """
+        if self.time:
+            if self.max_iter:
+                return f"Time={self.time}, MaxIter={self.max_iter}, d_time={self.d_time}, n_iter={self.n_iter}, verbose={self.verbose}"
+            return f"Time={self.time}, d_time={self.d_time}s, verbose={self.verbose}"
+        return f"MaxIter={self.max_iter}, n_iter={self.n_iter}, curr_iter={self.curr_iter}, verbose={self.verbose}"
 
-T = TypeVar('T', bound='MCTSNode')
+
+class NormOpt(Enum):
+    """
+    Class to represent the different normalization options for the MCTS algorithm
+    """
+    SOFTMAX = 1
+    UNIFORM = 2
+    NONE = 3
+
+
+T = TypeVar('T', bound='MCTSNode')  # Define the type now to not have an issue with recursive typing
 
 
 class MCTSNode:
+    """
+    MCTSNode class to represent a node in the MCTS algorithm.
+
+    Args:
+        label (Optional[int]): The label of the node
+        rank (int): The rank of the node
+        n_children (int): The number of children for the node
+        proba (float): The probability of the node
+        parent (Optional[MCTSNode]): The parent node
+        parent_labels (List[int]): The labels of the parent nodes
+
+    Attributes:
+        proba (float): The probability of the node
+        label (Optional[int]): The label of the node
+        visit_count (int): The number of times the node has been visited
+
+        parent (Optional[MCTSNode]): The parent node
+        children (List[MCTSNode]): The children nodes
+        n_children (int): The number of children for the node
+        rank (int): The rank of the node
+
+        parent_labels (List[int]): The labels of the parent nodes
+
+    Methods:
+        __get__(self, key: int) -> "MCTSNode": get the child node at the given key
+        is_terminal(self) -> bool: Returns True if the node is a terminal node, False otherwise
+        is_expanded(self) -> bool: Returns True if the node is expanded, False otherwise
+        expand(self) -> None: Expand the node by creating its children
+        get_parent_labels(self) -> list[int]: Get the labels of the parent nodes
+        __str__(self) -> str: String representation of the node
+        __repr__(self) -> str: String representation of the node
+        print_all(self) -> None: Print all the attributes of the node in a readable format
+        delete(self) -> None: Delete the node and all its children
+        check_correctness(self) -> bool: Checks recursively that all the children's visit count sum to that of their parent node
+        is_fully_expanded(self) -> bool: Checks recursively if the entire tree has been expanded
+        normalize_proba(self, opt: NormOpt = NormOpt.SOFTMAX) -> None: Normalizes the rewards obtained at each node into a distribution
+
+    Examples:
+        >>> node = MCTSNode(label=0, rank=2, n_children=2, proba=0.5, parent=None, parent_labels=[])
+        >>> node
+        (MCTSNode: L=0, R=2, P=0.5000, PL[])
+        >>> node.is_terminal()
+        False
+        >>> node.is_expanded()
+        False
+        >>> node.expand()
+        >>> node.is_expanded()
+        True
+        >>> node.children
+        [(MCTSNode: L=0, R=1, P=0.0000, PL[0]), (MCTSNode: L=1, R=1, P=0.0000, PL[1])]
+        >>> node.children[0].parent
+        (MCTSNode: L=0, R=2, P=0.5000, PL[])
+    """
     def __init__(self,
                  label: Optional[int] = 0,
                  rank: int = 2,
@@ -84,48 +201,73 @@ class MCTSNode:
         self.parent_labels: List[int] = parent_labels
 
     def __get__(self, key: int) -> "MCTSNode":
+        """
+        get the child node at the given key
+        Examples:
+            >>> node = MCTSNode(label=0, rank=2, n_children=2, proba=0.5, parent=None, parent_labels=[])
+            >>> node.expand()
+            >>> node[0]
+            (MCTSNode: L=0, R=1, P=0.0000, PL[0])
+            >>> node[1]
+            (MCTSNode: L=1, R=1, P=0.0000, PL[1])
+        """
         assert (key >= 0 and key < self.n_children), f"{key} is not a valid key."
         assert (self.is_expanded()), f"Node not yet expanded. Cannot get the child node at key:{key}."
         return self.children[key]
 
     def is_terminal(self) -> bool:
+        """
+        Returns True if the node is a terminal node, False otherwise.
+        A node is terminal if its rank is 0.
+        """
         return (self.rank == 0)
 
     def is_expanded(self) -> bool:
+        """
+        Returns True if the node is expanded, False otherwise.
+        A node is expanded if it has children.
+        """
         return (len(self.children) != 0)
 
     def expand(self) -> None:
+        """
+        Expand the node by creating its children.
+        Each child will have a rank one less than the parent node.
+        """
         assert (not self.is_terminal()), "Cannot expand a terminal node"
         self.children = [MCTSNode(label=i, rank=self.rank-1, n_children=self.n_children,
                                   parent=self, parent_labels=self.parent_labels+[i]) for i in range(self.n_children)]
-    #     def get_parent_labels(self) -> list[int]:
-    #         print(f"IN:{self}")
-    #         if self.parent is None: # root node
-    #             print(f"ROOT OUT:{self}")
-    #             return []
-    #         if self.parent_labels is None:
-    # #             print(f"New parent labels, {self}")
-    #             self.parent_labels = self.parent.get_parent_labels()
-    #             self.parent_labels.append(self.label)
-    # #         print(self.parent_labels)
-    #         print(f"OUT:{self}")
-    #         return self.parent_labels
 
     def get_parent_labels(self) -> list[int]:
+        """
+        Get the labels of the parent nodes.
+        """
         return self.parent_labels
 
     def __str__(self) -> str:
-        out = f"*MCTSNode: L={self.label}, R={self.rank}, P={self.proba:.4f}, PL{self.parent_labels}*"
+        """
+        String representation of the node
+        """
+        out: str = f"(MCTSNode: L={self.label}, R={self.rank}, P={self.proba:.4f}, PL{self.parent_labels})"
         return out
 
     def __repr__(self) -> str:
+        """
+        String representation of the node
+        """
         return str(self)
 
     def print_all(self) -> None:
+        """
+        Print all the attributes of the node in a readable format.
+        """
         print("\n".join([f"{k}:{v}" for k, v in self.__dict__.items()]))
 
     def delete(self) -> None:
-        # if not self.is_expanded() :
+        """
+        Delete the node and all its children.
+        """
+        # if not self.is_expanded() :  # Code never reached
         #     del self
         #     return
         for child in self.children:
@@ -133,18 +275,47 @@ class MCTSNode:
         del self
 
     def check_correctness(self) -> bool:
-        # checks recursively that all the children's visit count sum to that of their parent node.
-        # if self.children is None:
+        """
+        Checks recursively that all the children's visit count sum to that of their parent node.
+
+        Args:
+            node (MCTSNode): The node from which to start the check
+
+        Returns:
+            bool: True if the visit count sum is correct, False otherwise
+
+        Examples:
+            >>> node = MCTSNode(label=0, rank=2, n_children=2, proba=0.5, parent=None, parent_labels=[])
+            >>> node.expand()
+            >>> node.children[0].visit_count = 2  # simulate that child 0 has been visited twice
+            >>> node.children[1].visit_count = 3  # simulate that child 1 has been visited three times
+            >>> node.visit_count
+            0
+            >>> node.check_correctness()
+            False
+            >>> node.visit_count = 5
+            >>> node.check_correctness()
+            True
+        """
+        # if self.children is None:  # Code never reached
         #     return True
-        ssum = 0
+        ssum: int = 0
         for child in self.children:
             if not child.check_correctness():
                 return False
             ssum += child.visit_count
-        return ssum == self.visit_count
+        return (ssum == self.visit_count)
 
     def is_fully_expanded(self) -> bool:
-        # checks recursively if the entire tree has been expanded
+        """
+        Checks recursively if the entire tree has been expanded
+
+        Args:
+            node (MCTSNode): The node from which to start the check
+
+        Returns:
+            bool: True if the entire tree has been expanded, False otherwise
+        """
         if self.is_terminal():
             return True
         for child in self.children:
@@ -155,6 +326,17 @@ class MCTSNode:
     def normalize_proba(self, opt: NormOpt = NormOpt.SOFTMAX) -> None:
         """
         Normalizes the rewards obtained at each node into a distribution
+
+        Examples:
+            >>> node = MCTSNode(label=0, rank=2, n_children=2, proba=0.5, parent=None, parent_labels=[])
+            >>> node.expand()
+            >>> node.children[0].proba = 0.
+            >>> node.children[1].proba = 2.
+            >>> node.normalize_proba(opt=NormOpt.SOFTMAX)
+            >>> node.children[0].proba
+            0.0
+            >>> node.children[1].proba
+            1.0
         """
         if self.is_terminal():
             return
@@ -175,6 +357,24 @@ class MCTSNode:
 
 
 def debug(func) -> Callable[..., Any]:
+    """
+    Wrapper to help in debugging the MCTS algorithm
+
+    Args:
+        func (Callable[..., Any]): The function to wrap
+
+    Returns:
+        Callable[..., Any]: The wrapped function
+
+    Examples:
+        >>> @debug
+        ... def f(x: int) -> int:
+        ...     return x
+        >>> f(1)
+        'f': args=(1,), kwargs={}
+        'f': output=1
+        1
+    """
     def wrapper(*args, **kwargs) -> Any:
         print(f"'{func.__name__}': {args=}, {kwargs=}")
         output: Any = func(*args, **kwargs)
@@ -185,6 +385,19 @@ def debug(func) -> Callable[..., Any]:
 
 # @debug
 def randmax(A: Any) -> int:
+    """
+    Function to return the index of the element with highest proba in A.
+
+    Args:
+        A (Any): The list of MCTSNode
+
+    Examples:
+        >>> node = MCTSNode(label=0, rank=2, n_children=2, proba=0.5, parent=None, parent_labels=[])
+        >>> node.expand()
+        >>> node.children[1].proba = 0.5
+        >>> randmax(node.children)
+        1
+    """
     maxValue: list[MCTSNode] = max(A, key=lambda x: x.proba).proba
     index: list[int] = [i for i in range(len(A)) if A[i].proba == maxValue]
     return int(np.random.choice(index))
@@ -192,6 +405,25 @@ def randmax(A: Any) -> int:
 
 # @debug
 def eps_greedy(node: MCTSNode, eps: float = 0.1) -> int:
+    """
+    Epislon greedy policy to select the next node to visit.
+    If eps=0, it is a greedy policy.
+
+    Args:
+        node (MCTSNode): The node from which to select the next node
+        eps (float): The epsilon value for the epsilon greedy policy
+
+    Examples:
+        >>> node = MCTSNode(label=0, rank=2, n_children=2, proba=0.5, parent=None, parent_labels=[])
+        >>> node.expand()
+        >>> node.children[1].proba = 0.5
+        >>> eps_greedy(node, eps=0)
+        1
+        >>> eps_greedy(node, eps=1)
+        0
+        >>> eps_greedy(node, eps=1)
+        1
+    """
     assert (eps >= 0 and eps <= 1), f"{eps = } should be in the [0,1] range."
     if np.random.rand() < eps:  # explore
         return np.random.choice(node.n_children)
@@ -200,6 +432,14 @@ def eps_greedy(node: MCTSNode, eps: float = 0.1) -> int:
 
 # @debug
 def select(node: MCTSNode, eps: float = 0.2) -> MCTSNode:
+    """
+    Select the next node to visit using the MCTS algorithm.
+    Selection is made using an epsilon greedy policy.
+
+    Args:
+        node (MCTSNode): The node from which to start the selection
+        eps (float): The epsilon value for the epsilon greedy policy
+    """
     while (node.is_expanded() and not node.is_terminal()):
         node.visit_count += 1
         ind: int = eps_greedy(node, eps)
@@ -209,6 +449,16 @@ def select(node: MCTSNode, eps: float = 0.2) -> MCTSNode:
 
 # @debug
 def back_prog(node: MCTSNode, reward: float) -> None:
+    """
+    Propagate the reward back up the tree.
+
+    Args:
+        node (MCTSNode): The node from which to propagate the reward
+        reward (float): The reward to propagate
+
+    Returns:
+        None
+    """
     if node.parent is None:  # root node, no need to update
         return
     assert (node.visit_count > 0), "Node has not yet been visited. A problem appened."
@@ -218,6 +468,19 @@ def back_prog(node: MCTSNode, reward: float) -> None:
 
 # @debug
 def simulate(node: MCTSNode, model: Any, x: Any, cache) -> float:
+    """
+    Simulate the rest of the episode from the given node.
+    Returns the reward for the episode.
+
+    Args:
+        node (MCTSNode): The node from which to simulate the episode
+        model (Any): The model to use for the simulation
+        x (Any): The input data
+        cache (Dict[list[int], float]): The cache to store the reward evaluation
+
+    Returns:
+        float: The reward for the episode
+    """
     node.visit_count += 1
     while (not node.is_terminal()):
         if not node.is_expanded():
@@ -229,14 +492,26 @@ def simulate(node: MCTSNode, model: Any, x: Any, cache) -> float:
 
 # @debug
 def get_reward(node: MCTSNode, model: Any, x: Any, cache: Dict[list[int], float] = {}) -> float:
+    """
+    Get the reward for the given node.
+    The reward is obtained from the model that does the inference.
+
+    Args:
+        node (MCTSNode): The node for which to get the reward
+        model (Any): The model to use for the reward evaluation, which has the predict_proba method
+        x (Any): The input data
+        cache (Dict[list[int], float]): The cache to store the reward evaluation
+    """
+    assert hasattr(model, 'predict_proba'), "Model must have a predict_proba method"
+
     labels: list[int] = node.get_parent_labels()
     if (labels) in cache:
         return cache[labels]
 
     assert (node.is_terminal()), f"Can only get rewards for a terminal node. Node rank={node.rank}."
     labels = node.get_parent_labels()
-    xy = x.reshape(1, -1)
-    p = 1
+    xy: np.ndarray[Any, np.dtype[Any]] = x.reshape(1, -1)
+    p: float = 1.0
 
     for j in range(len(labels)):
         if j > 0:
@@ -251,30 +526,48 @@ def get_reward(node: MCTSNode, model: Any, x: Any, cache: Dict[list[int], float]
 
 
 def bestChild(root: MCTSNode) -> list[int]:  # best proba
+    """
+    Returns the labels of the best child of the root node following a greedy policy.
+
+    Args:
+        root (MCTSNode): The root node from which to select the best child
+    """
     return select(root, eps=0).get_parent_labels()
 
 
 def MCTS(model, x, verbose: bool = False, secs: float = 1) -> list[int]:
-    n_classes: int = len(model.estimators_)
-    root = MCTSNode(label=None, n_children=2, rank=n_classes, proba=1)
+    """
+    Monte Carlo Tree Search alogrithm.
 
-    ComputationalConstraint = Constraint(time=True, d_time=secs, max_iter=False, n_iter=0, verbose=verbose)
+    Args:
+        model (Any): The model to use for the MCTS algorithm
+        x (Any): The input data
+        verbose (bool): If True, the constraints will print a message when they are reached
+        secs (float): The time constraint in seconds
+
+    Returns:
+        list[int]: The labels of the best child of the root node following a greedy policy
+    """
+    n_classes: int = len(model.estimators_)
+    root: MCTSNode = MCTSNode(label=None, n_children=2, rank=n_classes, proba=1)
+
+    ComputationalConstraint: Constraint = Constraint(time=True, d_time=secs, max_iter=False, n_iter=0, verbose=verbose)
 
     cache: Dict[list[int], float] = {}  # Create a cache to store the reward evaluation to gain inference speed
     while (ComputationalConstraint):
-        node = select(root)
-        reward = simulate(node, model, x, cache)
+        node: MCTSNode = select(root)
+        reward: float = simulate(node, model, x, cache)
         back_prog(node, reward)
 
     return bestChild(root)
 
 
 def func2() -> None:
-    n_samples = 1000
-    n_features = 6
-    n_classes = 3
-    n_labels = 2
-    random_state = 0
+    n_samples: int = 1000
+    n_features: int = 6
+    n_classes: int = 3
+    n_labels: int = 2
+    random_state: int = 0
 
     X, Y = make_multilabel_classification(
         n_samples=n_samples,
@@ -291,7 +584,7 @@ def func2() -> None:
 
     solver = "liblinear"
     base = LogisticRegression(solver=solver)
-    chain = ClassifierChain(base)
+    chain: ClassifierChain = ClassifierChain(base)
 
     chain = chain.fit(X_train, Y_train)
 
