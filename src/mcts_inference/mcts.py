@@ -1,127 +1,27 @@
+"""
+This module contains the implementation of the Monte Carlo Tree Search (MCTS) algorithm.
+The MCTS algorithm is used to find the best child of a given node in a tree.
+The tree is built by expanding the nodes and propagating the rewards back up the tree.
+
+There are different policies to select the next node to visit, such as epsilon greedy here.
+
+TODOS:
+    - Add more examples
+    - Add more tests
+
+    - Implement more Policies
+"""
+
 import numpy as np
-from enum import Enum
-from typing import Optional, Any, Dict, Callable, List, TypeVar
-from time import time
+from typing import Optional, Any, Dict, List, TypeVar
 
 from sklearn.datasets import make_multilabel_classification
 from sklearn.model_selection import train_test_split
 from sklearn.multioutput import ClassifierChain
 from sklearn.linear_model import LogisticRegression
 
-
-np.set_printoptions(precision=3)
-
-
-class Constraint:
-    """
-    Constraint class to handle the time and iteration constraints.
-    It is used for the MCTS algorithm to stop the search when the time or iteration constraints are reached.
-
-    Args:
-        time (bool): If True, the time constraint is activated
-        max_iter (bool): If True, the iteration constraint is activated
-        d_time (float): The time constraint in seconds
-        n_iter (int): The iteration constraint
-        verbose (bool): If True, the constraints will print a message when they are reached
-
-    Methods:
-        reset(self) -> None: Reset the constraints to their initial state
-        _bool_time(self) -> bool: Check the time constraint
-        _bool_iter(self) -> bool: Check the iteration constraint
-        __bool__(self) -> bool: Returns True if the constraints are satisfied, False otherwise
-
-    Raises:
-        AssertionError: If both time and max_iter are False
-        AssertionError: If max_iter is True and n_iter is not a positive integer
-        AssertionError: If time is True and d_time is not a positive float
-
-    Examples:
-        >>> c = Constraint(time=True, d_time=1., max_iter=False, n_iter=0, verbose=True)
-        >>> bool(c)
-        True
-        >>> c = Constraint(time=False, d_time=1., max_iter=True, n_iter=100, verbose=True)
-        >>> bool(c)
-        True
-        >>> c = Constraint(time=True, d_time=1., max_iter=True, n_iter=100, verbose=True)
-        >>> bool(c)
-        True
-        >>> c.curr_iter == 1
-        True
-        >>> c = Constraint(time=False, d_time=1., max_iter=False, n_iter=0, verbose=True)
-        AssertionError: At least time=False or max_iter=False should be True
-    """
-    def __init__(self, time: bool = False, max_iter: bool = False, d_time: float = 1., n_iter: int = 100, verbose: bool = False) -> None:
-        assert (time or max_iter), f"At least {time=} or {max_iter=} should be True"
-        assert (not max_iter or (isinstance(n_iter, int) and n_iter > 0)), f"{n_iter=} should be positive if {max_iter=}"
-        assert ((not time) or (d_time > 0)), f"{d_time=} should be positive if {time=}"
-
-        self.time: bool = time
-        self.d_time: float = d_time
-        self.end_time: float = 0
-
-        self.max_iter: bool = max_iter
-        self.n_iter: int = n_iter
-        self.curr_iter: int = 0
-
-        self.reset()
-
-        self.verbose: bool = verbose
-
-    def reset(self) -> None:
-        """
-        Reset the constraints to their initial state
-        """
-        self.end_time = time() + self.d_time
-        self.curr_iter = -1
-
-    def _bool_time(self) -> bool:
-        """
-        Check the time constraint
-        """
-        return (not self.time or self.end_time >= time())
-
-    def _bool_iter(self) -> bool:
-        """
-        Check the iteration constraint
-        """
-        self.curr_iter += 1
-        return (not self.max_iter or self.curr_iter < self.n_iter)
-
-    def __bool__(self) -> bool:
-        """
-        Returns True if the constraints are satisfied, False otherwise
-        It updates the current iteration and time based on the options
-        """
-        if self.verbose:  # verbose
-            bt: bool = self._bool_time()
-            bi: bool = self._bool_iter()
-            if not bt:
-                print(f"Time Constraint Attained. Current iteration: {self.curr_iter:_}/{self.n_iter:_}")
-                return False
-            if not bi:
-                print(f"Iteration Constraint Attained. Time left: {self.end_time - time():.3f}/{self.d_time}s")
-                return False
-            return True
-        return self._bool_time() and self._bool_iter()
-
-    def __str__(self) -> str:
-        """
-        String representation of the constraint
-        """
-        if self.time:
-            if self.max_iter:
-                return f"Time={self.time}, MaxIter={self.max_iter}, d_time={self.d_time}, n_iter={self.n_iter}, verbose={self.verbose}"
-            return f"Time={self.time}, d_time={self.d_time}s, verbose={self.verbose}"
-        return f"MaxIter={self.max_iter}, n_iter={self.n_iter}, curr_iter={self.curr_iter}, verbose={self.verbose}"
-
-
-class NormOpt(Enum):
-    """
-    Class to represent the different normalization options for the MCTS algorithm
-    """
-    SOFTMAX = 1
-    UNIFORM = 2
-    NONE = 3
+from mcts_inference.constraints import Constraint
+from mcts_inference.utils import NormOption
 
 
 T = TypeVar('T', bound='MCTSNode')  # Define the type now to not have an issue with recursive typing
@@ -163,7 +63,7 @@ class MCTSNode:
         delete(self) -> None: Delete the node and all its children
         check_correctness(self) -> bool: Checks recursively that all the children's visit count sum to that of their parent node
         is_fully_expanded(self) -> bool: Checks recursively if the entire tree has been expanded
-        normalize_proba(self, opt: NormOpt = NormOpt.SOFTMAX) -> None: Normalizes the rewards obtained at each node into a distribution
+        normalize_proba(self, opt: NormOption = NormOption.SOFTMAX) -> None: Normalizes the rewards obtained at each node into a distribution
 
     Examples:
         >>> node = MCTSNode(label=0, rank=2, n_children=2, proba=0.5, parent=None, parent_labels=[])
@@ -323,7 +223,7 @@ class MCTSNode:
                 return False
         return True
 
-    def normalize_proba(self, opt: NormOpt = NormOpt.SOFTMAX) -> None:
+    def normalize_proba(self, opt: NormOption = NormOption.SOFTMAX) -> None:
         """
         Normalizes the rewards obtained at each node into a distribution
 
@@ -332,7 +232,7 @@ class MCTSNode:
             >>> node.expand()
             >>> node.children[0].proba = 0.
             >>> node.children[1].proba = 2.
-            >>> node.normalize_proba(opt=NormOpt.SOFTMAX)
+            >>> node.normalize_proba(opt=NormOption.SOFTMAX)
             >>> node.children[0].proba
             0.0
             >>> node.children[1].proba
@@ -342,45 +242,18 @@ class MCTSNode:
             return
         probas: np.ndarray[Any, np.dtype[Any]] = np.array([child.proba for child in self.children])
 
-        if opt == NormOpt.SOFTMAX:
+        if opt == NormOption.SOFTMAX:
             probas = np.exp(probas)
-        elif opt == NormOpt.UNIFORM:
+        elif opt == NormOption.UNIFORM:
             pass
-        elif opt == NormOpt.NONE:
+        elif opt == NormOption.NONE:
             pass  # Do nothing
 
-        if opt != NormOpt.NONE:
+        if opt != NormOption.NONE:
             probas /= np.sum(probas)
 
         for i, child in enumerate(self.children):
             child.proba = probas[i]
-
-
-def debug(func) -> Callable[..., Any]:
-    """
-    Wrapper to help in debugging the MCTS algorithm
-
-    Args:
-        func (Callable[..., Any]): The function to wrap
-
-    Returns:
-        Callable[..., Any]: The wrapped function
-
-    Examples:
-        >>> @debug
-        ... def f(x: int) -> int:
-        ...     return x
-        >>> f(1)
-        'f': args=(1,), kwargs={}
-        'f': output=1
-        1
-    """
-    def wrapper(*args, **kwargs) -> Any:
-        print(f"'{func.__name__}': {args=}, {kwargs=}")
-        output: Any = func(*args, **kwargs)
-        print(f"'{func.__name__}': {output=}")
-        return output
-    return wrapper
 
 
 # @debug

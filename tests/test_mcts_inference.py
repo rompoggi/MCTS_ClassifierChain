@@ -1,18 +1,21 @@
+"""
+Test file for the MCTS inference module.
+
+TODO:
+- Add tests for MCTSInference class
+"""
+
 import pytest
-from mcts_inference.mcts import Constraint as Constraint
 
 
-def test_constraint_initialization() -> None:
-    pass
+@pytest.mark.skip(reason="example skip")
+def test_skip() -> None:
+    assert (True is False)
 
 
-def test_constraint_bool() -> None:
-    constraint = Constraint(time=True, d_time=1, verbose=True)
-
-    result = bool(constraint)
-
-    assert (result is True)
-
+@pytest.mark.xfail(reason="example xfail")
+def test_divide_by_zero() -> None:
+    assert 1 / 0 == 1
 
 # def test_empty_slap():
 #     assert slap_many(LikeState.empty, '') is LikeState.empty
@@ -34,16 +37,6 @@ def test_constraint_bool() -> None:
 # ])
 # def test_multi_slaps(test_input, expected):
 #     assert slap_many(LikeState.empty, test_input) is expected
-
-
-@pytest.mark.skip(reason="example skip")
-def test_skip() -> None:
-    assert (True is False)
-
-
-@pytest.mark.xfail
-def test_divide_by_zero() -> None:
-    assert 1 / 0 == 1
 
 
 # def test_invalid_slap():
