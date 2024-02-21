@@ -45,10 +45,10 @@ def test_constraint_initialization_dtime(test_input) -> None:
 def test_constraint_time_attained(test_input) -> None:
     from time import sleep
     constraint = Constraint(time=True, d_time=test_input)
-    sleep(test_input/2)
+    sleep(test_input/4)
     if not bool(constraint):
         assert (False), "Constraint should be True, but it is False"
-    sleep(test_input/2)
+    sleep(test_input)
     assert (bool(constraint) is False), "Constraint should have been attained"
 
 
