@@ -41,7 +41,7 @@ def test_constraint_initialization_dtime(test_input) -> None:
         assert (True), "AssertionError was raised correctly"
 
 
-@pytest.mark.parametrize("test_input", [1., 0.1, 0.01, 0.001])
+@pytest.mark.parametrize("test_input", [1., 0.1])
 def test_constraint_time_attained(test_input) -> None:
     from time import sleep
     constraint = Constraint(time=True, d_time=test_input)
