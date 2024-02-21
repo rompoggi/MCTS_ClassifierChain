@@ -2,4 +2,5 @@ flake8==7.0.0
 tox==4.13.0
 pytest==8.0.1
 pytest-cov==4.1.0
+coverage==6.0
 mypy==1.8.0
