@@ -35,9 +35,9 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           flags: smart-tests
-          verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
           handle_no_reports_found: true
+          verbose: true
         env:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
           slug: rompoggi/MCTS_ClassifierChain
