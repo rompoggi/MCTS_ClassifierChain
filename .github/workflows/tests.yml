@@ -36,6 +36,7 @@ jobs:
         with:
           flags: smart-tests
           verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
         env:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: rompoggi/MCTS_ClassifierChain
