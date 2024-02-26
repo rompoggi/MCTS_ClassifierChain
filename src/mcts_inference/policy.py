@@ -75,3 +75,23 @@ class UCB(Policy):
 
 __all__: list[str] = ["Policy", "Random", "EpsGreedy", "UCB"]
 
+# class Thompson_Sampling(Policy):
+#     """Thompson Sampling with Beta(a,b) prior and Bernoulli likelihood"""
+#     def __init__(self, a: float = 1., b: float = 1.) -> None:
+#         self.a: float = a
+#         self.b: float = b
+
+#     def __call__(self, node: MCTSNode) -> Any:
+#         if min([child.visit_count for child in node.children]) == 0:
+#             return randmax([-child.visit_count for child in node.children])
+
+#         rwd = np.array(node.get_children_scores)
+#         pi = np.random.beta(self.a + rwd), self.b + self.nbDraws - self.cumRewards)
+#         return randmax(pi)
+
+#     def receiveReward(self, arm, reward):
+#         self.cumRewards[arm] = self.cumRewards[arm]+reward
+#         self.nbDraws[arm] = self.nbDraws[arm] +1
+
+#     def name(self):
+#         return "Thompson Sampling"
