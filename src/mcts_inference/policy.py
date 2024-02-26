@@ -72,3 +72,6 @@ class UCB(Policy):
                                                         for child in node.children])
         return randmax(ucb)
 
+
+__all__: list[str] = ["Policy", "Random", "EpsGreedy", "UCB"]
+

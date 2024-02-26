@@ -106,3 +106,6 @@ curr_iter={self.curr_iter}, verbose={self.verbose}"
 
     def __repr__(self) -> str:
         return str(self)
+
+
+__all__: list[str] = ['Constraint']

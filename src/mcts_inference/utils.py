@@ -44,3 +44,6 @@ def debug(func) -> Callable[..., Any]:
         print(f"'{func.__name__}': {output=}")
         return output
     return wrapper
+
+
+__all__: list[str] = ['NormOption', 'debug']

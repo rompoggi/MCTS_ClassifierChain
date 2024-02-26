@@ -502,6 +502,11 @@ def visualize_tree(root: MCTSNode, with_path: bool = False, name: str = "binary_
     dot.render(name, format='png', view=True, cleanup=not (save))
 
 
+__all__: list[str] = ["MCTSNode", "MCTS", "randmax", "eps_greedy",
+                      "ucb", "select", "back_prog",
+                      "simulate", "get_reward", "best_child",
+                      "visualize_tree"]
+
 if __name__ == "__main__":
     from sklearn.datasets import make_multilabel_classification
     from sklearn.model_selection import train_test_split
