@@ -10,6 +10,15 @@ class Policy:
     def __call__(self, node: MCTSNode) -> Any:
         raise NotImplementedError("Policy.__call__ method not implemented.")
 
+    def name(self) -> str:
+        raise NotImplementedError("Policy.name method not implemented.")
+
+    def __str__(self) -> str:
+        raise NotImplementedError("Policy.__str__ method not implemented.")
+
+    def __repr__(self) -> str:
+        raise NotImplementedError("Policy.__repr__ method not implemented.")
+
 
 class Uniform(Policy):
     def __init__(self) -> None:
@@ -39,6 +48,40 @@ class Uniform(Policy):
     def __str__(self) -> str:
         return "Uniform"
 
+    def __repr__(self) -> str:
+        return str(self)
+
+
+class Greedy(Policy):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def __call__(self, node: MCTSNode) -> Any:
+        """
+        Greedy policy to select the next node to visit.
+
+        Args:
+            node (MCTSNode): The node from which to select the next node
+
+        Examples:
+            >>> node = MCTSNode(label=0, rank=2, n_children=2, score=0.5, parent=None, parent_labels=[])
+            >>> node.expand()
+            >>> node.children[1].score = 0.5
+            >>> greedy = Greedy()
+            >>> greedy(node)
+            1
+        """
+        return randmax(node.get_children_scores())
+
+    def name(self) -> str:
+        return "Greedy"
+
+    def __str__(self) -> str:
+        return "Greedy"
+
+    def __repr__(self) -> str:
+        return str(self)
+
 
 class EpsGreedy(Policy):
     """
@@ -64,7 +107,7 @@ class EpsGreedy(Policy):
         >>> eg(node)
         1
         """
-        if np.random.rand() < self.epsilon:  # explore
+        if np.random.rand() <= self.epsilon:  # explore
             return np.random.choice(node.n_children)
         return randmax(node.get_children_scores())
 
@@ -73,6 +116,9 @@ class EpsGreedy(Policy):
 
     def __str__(self) -> str:
         return f"EpsGreedy(epsilon={self.epsilon})"
+
+    def __repr__(self) -> str:
+        return str(self)
 
 
 class UCB(Policy):
@@ -97,12 +143,12 @@ class UCB(Policy):
         """
         assert (node.visit_count > 0), "Node has not yet been visited. A problem appened."
 
-        if min([child.visit_count for child in node.children]) == 0:
-            return randmax([-child.visit_count for child in node.children])
+        counts: np.ndarray[Any, np.dtype[np.int64]] = node.get_children_counts()
+        if min(counts) == 0:
+            return randmax(-counts)
 
-        ucb: np.ndarray[Any, np.dtype[Any]] = np.array([child.score +
-                                                        np.sqrt(self.alpha * np.log(node.visit_count) / child.visit_count)
-                                                        for child in node.children])
+        scores: np.ndarray[Any, np.dtype[np.float64]] = node.get_children_scores()
+        ucb: np.ndarray[Any, np.dtype[np.float64]] = scores / counts + np.sqrt(self.alpha * np.log(node.visit_count) / counts)
         return randmax(ucb)
 
     def name(self) -> str:
@@ -110,6 +156,9 @@ class UCB(Policy):
 
     def __str__(self) -> str:
         return f"UCB(alpha={self.alpha})"
+
+    def __repr__(self) -> str:
+        return str(self)
 
 
 class Thompson_Sampling(Policy):
@@ -133,18 +182,23 @@ class Thompson_Sampling(Policy):
             >>> ts(node)
             1
         """
-        if min(node.get_children_counts()) == 0:
-            return randmax(-node.get_children_counts())
 
-        rwd: np.ndarray[Any, np.dtype[np.float64]] = node.get_children_scores()
-        pi: np.ndarray[Any, np.dtype[np.float64]] = np.random.beta(rwd + self.a, self.b + node.get_children_counts() - rwd)
+        counts: np.ndarray[Any, np.dtype[np.int64]] = node.get_children_counts()
+        if min(counts) == 0:
+            return randmax(-counts)
+
+        scores: np.ndarray[Any, np.dtype[np.float64]] = node.get_children_scores()
+        pi: np.ndarray[Any, np.dtype[np.float64]] = np.random.beta(scores + self.a, self.b + counts - scores)
         return randmax(pi)
 
     def name(self) -> str:
-        return "Thompson Sampling"
+        return "Thompson_Sampling"
 
     def __str__(self) -> str:
         return f"Thompson_Sampling(a={self.a}, b={self.b})"
 
+    def __repr__(self) -> str:
+        return str(self)
 
-__all__: list[str] = ["Policy", "Uniform", "EpsGreedy", "UCB", "Thompson_Sampling"]
+
+__all__: list[str] = ["Policy", "Uniform", "Greedy", "EpsGreedy", "UCB", "Thompson_Sampling"]
