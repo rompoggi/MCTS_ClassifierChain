@@ -1,4 +1,5 @@
-from .mcts import MCTSNode, randmax
+from .mcts import randmax
+from .mcts_node import MCTSNode
 import numpy as np
 from typing import Any
 

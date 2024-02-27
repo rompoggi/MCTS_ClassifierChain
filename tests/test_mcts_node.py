@@ -1,10 +1,10 @@
 """
-Test file for the mcts module.
+Test file for the mcts_node module.
 """
 
 import numpy as np
 import pytest
-from mcts_inference.mcts import MCTSNode, randmax, normalize_score
+from mcts_inference.mcts_node import MCTSNode, normalize_score, visualize_tree
 from mcts_inference.utils import NormOption
 
 
@@ -165,11 +165,25 @@ def test_normalize_score_none() -> None:
     assert (node[0][0].score == 1.)
 
 
-@pytest.mark.parametrize("arr, argmax", [([0, 0, 1], 2), ([0, 10, -1], 1)])
-def test_randmax_unique_max(arr, argmax) -> None:
-    assert (randmax(arr) == argmax)
+def test_visualize_tree() -> None:
+    root = MCTSNode(label=None, rank=2, n_children=2)
+    with pytest.raises(AssertionError):
+        visualize_tree(root, view=False, save=False)
+    root.expand()
+    root[0].expand()
+    root[1].expand()
+    visualize_tree(root, None, view=False, save=True)
+    visualize_tree(root, [0, 1], view=False, save=True)
+    import os
 
+    assert (os.path.exists("binary_tree.png"))
+    os.remove("binary_tree.png")
+    os.remove("binary_tree")
+    assert (not os.path.exists("binary_tree.png")), "A problem occured during cleanup"
+    assert (not os.path.exists("binary_tree")), "A problem occured during cleanup"
 
-@pytest.mark.parametrize("arr, argmaxs", [([0, 1, 1, 0, 0], [1, 2]), ([11, 10, -1, 11, 0], [0, 3])])
-def test_randmax_mult_max(arr, argmaxs) -> None:
-    assert (randmax(arr) in argmaxs)
+    assert (os.path.exists("binary_tree_with_path.png"))
+    os.remove("binary_tree_with_path.png")
+    os.remove("binary_tree_with_path")
+    assert (not os.path.exists("binary_tree_with_path.png")), "A problem occured during cleanup"
+    assert (not os.path.exists("binary_tree_with_path")), "A problem occured during cleanup"
