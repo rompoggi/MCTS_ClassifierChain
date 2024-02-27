@@ -252,7 +252,6 @@ class MCTSNode:
         for i, child in enumerate(self.children):
             child.score = scores[i]
 
-    def get_children_scores(self) -> list[float]:
         """
         Get the scores of the children nodes
         """
