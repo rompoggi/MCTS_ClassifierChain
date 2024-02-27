@@ -106,7 +106,7 @@ class MCTSNode:
         """
         assert (key >= 0 and key < self.n_children), f"{key} is not a valid key."
         assert (self.is_expanded()), f"Node not yet expanded. Cannot get the child node at key:{key}."
-        return self[key]
+        return self.children[key]
 
     def is_terminal(self) -> bool:
         """
