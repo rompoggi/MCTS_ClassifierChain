@@ -5,7 +5,7 @@ This project uses the Monte Carlo Tree Search (MCTS) algorithm for multi-label c
 
 MCTS is a heuristic search algorithm used in decision-making processes, particularly in game playing. It involves building a search tree by performing random simulations and using the results of those simulations to make more informed decisions.
 
-![Monte Carlo Tree Search](https://www.google.com/url?sa=i&url=https%3A%2F%2Fstackoverflow.com%2Fquestions%2F44230911%2Fhow-does-monte-carlo-search-tree-work&psig=AOvVaw15Ban5OciSzMIkwMz9p29g&ust=1709157244254000&source=images&cd=vfe&opi=89978449&ved=0CBMQjRxqFwoTCNDzrJbBzIQDFQAAAAAdAAAAABAK)
+![Monte Carlo Tree Search](https://i.stack.imgur.com/GR7qf.png)
 
 The MCTS algorithm consists of four main steps:
 
