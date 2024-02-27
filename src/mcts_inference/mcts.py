@@ -54,8 +54,7 @@ class MCTSNode:
         __str__(self) -> str: String representation of the node
         __repr__(self) -> str: String representation of the node
         print_all(self) -> None: Print all the attributes of the node in a readable format
-        delete(self) -> None: Delete the node and all its children
-        check_correctness(self) -> bool: Checks recursively that all the children's visit count sum to that of their parent node
+        check_correct_count(self) -> bool: Checks recursively that all the children's visit count sum to that of their parent node
         is_fully_expanded(self) -> bool: Checks recursively if the entire tree has been expanded
         normalize_proba(self, opt: NormOption = NormOption.SOFTMAX) -> None: Normalizes the rewards obtained at each node into a distribution
 
@@ -72,7 +71,7 @@ class MCTSNode:
         True
         >>> node.children
         [(MCTSNode: L=0, R=1, P=0.0000, PL[0]), (MCTSNode: L=1, R=1, P=0.0000, PL[1])]
-        >>> node.children[0].parent
+        >>> node[0].parent
         (MCTSNode: L=0, R=2, P=0.5000, PL[])
     """
     def __init__(self,
@@ -94,7 +93,7 @@ class MCTSNode:
 
         self.parent_labels: List[int] = parent_labels
 
-    def __get__(self, key: int) -> "MCTSNode":
+    def __getitem__(self, key: int) -> "MCTSNode":
         """
         get the child node at the given key
         Examples:
@@ -107,7 +106,7 @@ class MCTSNode:
         """
         assert (key >= 0 and key < self.n_children), f"{key} is not a valid key."
         assert (self.is_expanded()), f"Node not yet expanded. Cannot get the child node at key:{key}."
-        return self.children[key]
+        return self[key]
 
     def is_terminal(self) -> bool:
         """
@@ -122,6 +121,13 @@ class MCTSNode:
         A node is expanded if it has children.
         """
         return (len(self.children) != 0)
+
+    def is_root(self) -> bool:
+        """
+        Returns True if the node is the root, False otherwise.
+        A node is a root if it's label is None.
+        """
+        return (self.label is None)
 
     def expand(self) -> None:
         """
@@ -157,49 +163,6 @@ class MCTSNode:
         """
         print("\n".join([f"{k}:{v}" for k, v in self.__dict__.items()]))
 
-    def delete(self) -> None:
-        """
-        Delete the node and all its children.
-        """
-        # if not self.is_expanded() :  # Code never reached
-        #     del self
-        #     return
-        for child in self.children:
-            child.delete()
-        del self
-
-    def check_correctness(self) -> bool:
-        """
-        Checks recursively that all the children's visit count sum to that of their parent node.
-
-        Args:
-            node (MCTSNode): The node from which to start the check
-
-        Returns:
-            bool: True if the visit count sum is correct, False otherwise
-
-        Examples:
-            >>> node = MCTSNode(label=0, rank=2, n_children=2, score=0.5, parent=None, parent_labels=[])
-            >>> node.expand()
-            >>> node.children[0].visit_count = 2  # simulate that child 0 has been visited twice
-            >>> node.children[1].visit_count = 3  # simulate that child 1 has been visited three times
-            >>> node.visit_count
-            0
-            >>> node.check_correctness()
-            False
-            >>> node.visit_count = 5
-            >>> node.check_correctness()
-            True
-        """
-        # if self.children is None:  # Code never reached
-        #     return True
-        ssum: int = 0
-        for child in self.children:
-            if not child.check_correctness():
-                return False
-            ssum += child.visit_count
-        return (ssum == self.visit_count)
-
     def is_fully_expanded(self) -> bool:
         """
         Checks recursively if the entire tree has been expanded
@@ -215,7 +178,43 @@ class MCTSNode:
         for child in self.children:
             if not child.is_fully_expanded():
                 return False
-        return True
+        return self.is_expanded()
+
+    def check_correct_count(self) -> bool:
+        """
+        Checks recursively that all the children's visit count sum to that of their parent node.
+
+        Args:
+            node (MCTSNode): The node from which to start the check
+
+        Returns:
+            bool: True if the visit count sum is correct, False otherwise
+
+        Examples:
+            >>> node = MCTSNode(label=0, rank=2, n_children=2, score=0.5, parent=None, parent_labels=[])
+            >>> node.expand()
+            >>> node[0].visit_count = 2  # simulate that child 0 has been visited twice
+            >>> node[1].visit_count = 3  # simulate that child 1 has been visited three times
+            >>> node.visit_count
+            0
+            >>> node.check_correct_count()
+            False
+            >>> node.visit_count = 5
+            >>> node.check_correct_count()
+            True
+        """
+        assert (self.is_fully_expanded())
+
+        def aux(node: MCTSNode) -> bool:
+            count: int = 0
+            if node.is_terminal():
+                return True
+            for child in node.children:
+                if not aux(child):
+                    return False
+                count += child.visit_count
+            return (count == node.visit_count)
+        return aux(self)
 
     def get_children_scores(self) -> np.ndarray[Any, np.dtype[np.float64]]:
         """
@@ -236,7 +235,7 @@ class MCTSNode:
 # End of the MCTSNode class methods. We define other functions to be used with the MCTSNode class #
 ###################################################################################################
 
-def visualize_tree(root: MCTSNode, best_child: Optional[list[int]] = None, name: str = "binary_tree", save: bool = False) -> None:
+def visualize_tree(root: MCTSNode, best_child: Optional[list[int]] = None, name: str = "binary_tree", save: bool = False) -> None:  # pragma: no cover
     """
     Visualize the search tree using the graphviz library.
 
@@ -262,9 +261,9 @@ def visualize_tree(root: MCTSNode, best_child: Optional[list[int]] = None, name:
     if best_child is not None:
         for i in range(len(best_child)):
             current_node_id = str(id(root))
-            next_node_id = str(id(root.children[best_child[i]]))
+            next_node_id = str(id(root[best_child[i]]))
             dot.edge(current_node_id, next_node_id, color="red")
-            root = root.children[best_child[i]]
+            root = root[best_child[i]]
 
         dot.render(name + 'with_path', format='png', view=True, cleanup=not (save))
         return
@@ -272,33 +271,32 @@ def visualize_tree(root: MCTSNode, best_child: Optional[list[int]] = None, name:
     dot.render(name, format='png', view=True, cleanup=not (save))
 
 
-def normalize_proba(root: MCTSNode, opt: NormOption = NormOption.SOFTMAX) -> None:
+def normalize_score(root: MCTSNode, opt: NormOption = NormOption.SOFTMAX) -> None:
     """
-    Normalizes the rewards obtained at each node into a distribution
+    Normalizes the scores obtained at each node into a distribution
 
     Examples:
         >>> node = MCTSNode(label=0, rank=2, n_children=2, score=0.5, parent=None, parent_labels=[])
         >>> node.expand()
-        >>> node.children[0].score = 0.
-        >>> node.children[1].score = 2.
-        >>> node.normalize_proba(opt=NormOption.SOFTMAX)
-        >>> node.children[0].score
+        >>> node[0].score = 0.
+        >>> node[1].score = 2.
+        >>> node.normalize_score(opt=NormOption.SOFTMAX)
+        >>> node[0].score
         0.0
-        >>> node.children[1].score
+        >>> node[1].score
         1.0
     """
-    if root.is_terminal():
-        return
+    assert (root.is_root())
 
     if opt == NormOption.SOFTMAX:
-        _normalize_proba_softmax(root)
+        _normalize_score_softmax(root)
     elif opt == NormOption.UNIFORM:
-        _normalize_proba_uniform(root)
+        _normalize_score_uniform(root)
     elif opt == NormOption.NONE:
-        _normalize_proba_none(root)
+        _normalize_score_none(root)
 
 
-def _normalize_proba_softmax(node: MCTSNode) -> None:
+def _normalize_score_softmax(node: MCTSNode) -> None:
     if node.is_terminal():
         return
     scores: np.ndarray[Any, np.dtype[np.float64]] = node.get_children_scores()
@@ -306,22 +304,23 @@ def _normalize_proba_softmax(node: MCTSNode) -> None:
     scores /= np.sum(scores)
 
     for i, child in enumerate(node.children):
+        _normalize_score_softmax(child)
         child.score = scores[i]
 
 
-def _normalize_proba_uniform(node: MCTSNode) -> None:
+def _normalize_score_uniform(node: MCTSNode) -> None:
     if node.is_terminal():
         return
     scores: np.ndarray[Any, np.dtype[np.float64]] = node.get_children_scores()
+    assert (min(scores) > 0)
     scores /= np.sum(scores)
 
     for i, child in enumerate(node.children):
+        _normalize_score_uniform(child)
         child.score = scores[i]
 
 
-def _normalize_proba_none(node: MCTSNode) -> None:
-    if node.is_terminal():
-        return
+def _normalize_score_none(node: MCTSNode) -> None:
     pass  # Do nothing
 
 
@@ -339,7 +338,7 @@ def randmax(A: Any) -> int:
     Examples:
         >>> node = MCTSNode(label=0, rank=2, n_children=2, score=0.5, parent=None, parent_labels=[])
         >>> node.expand()
-        >>> node.children[1].score = 0.5
+        >>> node[1].score = 0.5
         >>> randmax(node.children)
         1
     """
@@ -349,7 +348,7 @@ def randmax(A: Any) -> int:
 
 
 # @debug
-def eps_greedy(node: MCTSNode, eps: float = 0.1) -> int:
+def eps_greedy(node: MCTSNode, eps: float = 0.1) -> int:  # pragma: no cover
     """
     Epislon greedy policy to select the next node to visit.
     If eps=0, it is a greedy policy.
@@ -361,7 +360,7 @@ def eps_greedy(node: MCTSNode, eps: float = 0.1) -> int:
     Examples:
         >>> node = MCTSNode(label=0, rank=2, n_children=2, score=0.5, parent=None, parent_labels=[])
         >>> node.expand()
-        >>> node.children[1].score = 0.5
+        >>> node[1].score = 0.5
         >>> eps_greedy(node, eps=0)
         1
         >>> eps_greedy(node, eps=1)
@@ -375,7 +374,7 @@ def eps_greedy(node: MCTSNode, eps: float = 0.1) -> int:
     return randmax(node.get_children_scores())
 
 
-def ucb(node: MCTSNode, alpha: float = 0.5) -> int:
+def ucb(node: MCTSNode, alpha: float = 0.5) -> int:  # pragma: no cover
     """
     Upper Confidence Bound (UCB) policy to select the next node to visit.
 
@@ -385,7 +384,7 @@ def ucb(node: MCTSNode, alpha: float = 0.5) -> int:
     Examples:
         >>> node = MCTSNode(label=0, rank=2, n_children=2, score=0.5, parent=None, parent_labels=[])
         >>> node.expand()
-        >>> node.children[1].score = 0.5
+        >>> node[1].score = 0.5
         >>> ucb(node)
         1
     """
@@ -411,7 +410,7 @@ def select(node: MCTSNode, eps: float = 0.2) -> MCTSNode:
     while (node.is_expanded() and not node.is_terminal()):
         node.visit_count += 1
         ind: int = eps_greedy(node, eps)
-        node = node.children[ind]
+        node = node[ind]
     return node
 
 
@@ -430,7 +429,6 @@ def back_prog(node: MCTSNode, reward: float) -> None:
     if node.parent is None:  # root node, no need to update
         return
     assert (node.visit_count > 0), "Node has not yet been visited. A problem appened."
-    # node.score = node.score + (reward - node.score) / node.visit_count  # average score
     node.score += reward
     back_prog(node.parent, reward)
 
@@ -460,7 +458,7 @@ def simulate(node: MCTSNode, model: Any, x: Any, cache: Dict[Tuple[int, ...], fl
 
 
 # @debug
-def get_reward(node: MCTSNode, model: Any, x: Any, cache: Dict[Tuple[int, ...], float] = {}) -> float:
+def get_reward(node: MCTSNode, model: Any, x: Any, cache: Dict[Tuple[int, ...], float] = {}) -> float:  # pragma: no cover
     """
     Get the reward for the given node.
     The reward is obtained from the model that does the inference.
@@ -504,7 +502,7 @@ def best_child(root: MCTSNode) -> list[int]:  # best score
     return select(root, eps=0).get_parent_labels()
 
 
-def MCTS(model, x, verbose: bool = False, secs: float = 1, visualize: bool = False, save: bool = False) -> list[int]:
+def MCTS(model, x, verbose: bool = False, secs: float = 1, visualize: bool = False, save: bool = False) -> list[int]:  # pragma: no cover
     """
     Monte Carlo Tree Search alogrithm.
 
@@ -540,9 +538,9 @@ def MCTS(model, x, verbose: bool = False, secs: float = 1, visualize: bool = Fal
 __all__: list[str] = ["MCTSNode", "MCTS", "randmax", "eps_greedy",
                       "ucb", "select", "back_prog",
                       "simulate", "get_reward", "best_child",
-                      "visualize_tree", "normalize_proba"]
+                      "visualize_tree", "normalize_score"]
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     from sklearn.datasets import make_multilabel_classification
     from sklearn.model_selection import train_test_split
     n_samples = 10000
