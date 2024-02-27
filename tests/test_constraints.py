@@ -1,3 +1,7 @@
+"""
+Test file for the constraints module.
+"""
+
 from mcts_inference.constraints import Constraint
 from math import inf
 import pytest

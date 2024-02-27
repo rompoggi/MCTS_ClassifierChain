@@ -1,8 +1,5 @@
 """
-Test file for the MCTS inference module.
-
-TODO:
-- Add tests for MCTSInference class
+Test file for the mcts module.
 """
 
 import numpy as np

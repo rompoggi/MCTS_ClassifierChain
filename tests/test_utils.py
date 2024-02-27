@@ -1,8 +1,7 @@
 """
-Test file for the ulitils module.
+Test file for the utils module.
 """
 
-import pytest
 from mcts_inference.utils import debug, NormOption
 from typing import Any
 
@@ -44,13 +43,3 @@ def test_debug(capfd) -> None:
     assert g(0, 1) == 0
     captured = capfd.readouterr()
     assert captured.out == "'g': args=(0, 1), kwargs={}\n'g': output=0\n"
-
-
-@pytest.mark.skip(reason="example skip")
-def test_skip() -> None:
-    assert (True is False)
-
-
-@pytest.mark.xfail(reason="example xfail")
-def test_divide_by_zero() -> None:
-    assert 1 / 0 == 1
