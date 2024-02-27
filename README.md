@@ -1,3 +1,4 @@
+# MCTS Classifier Chain
 
 This project uses the Monte Carlo Tree Search (MCTS) algorithm for multi-label classification tasks. 
 
@@ -5,7 +6,9 @@ This project uses the Monte Carlo Tree Search (MCTS) algorithm for multi-label c
 
 MCTS is a heuristic search algorithm used in decision-making processes, particularly in game playing. It involves building a search tree by performing random simulations and using the results of those simulations to make more informed decisions.
 
-![Monte Carlo Tree Search](https://i.stack.imgur.com/GR7qf.png)
+<p align="center">
+    <img src="https://i.stack.imgur.com/GR7qf.png" alt="Monte Carlo Tree Search" style="border:3px solid black;">
+</p>
 
 The MCTS algorithm consists of four main steps:
 
@@ -17,13 +20,13 @@ The MCTS algorithm consists of four main steps:
 
 - **Backpropagation**: The outcome of the simulation is backpropagated up the tree, updating the information at each node (like the number of visits and average reward) along the path.
 
-The process is repeated for a certain number of iterations or until a computational budget has been exhausted. The child of the root with the highest average reward is selected as the next action.
+The process is repeated for a certain number of iterations or until a computational budget has been exhausted. The child of the root with the highest average reward is selected as the next action. If you want more details about the MCTS algorithm, find more in the paper [Monte Carlo Tree Search: A Review of Recent Modifications and Applications](https://arxiv.org/abs/2103.04931) by Maciej Świechowski, Konrad Godlewski, Bartosz Sawicki, and Jacek Mańdziuk.
 
 ## Multi-label Classification
 
 In machine learning, multi-label classification is a type of classification in which an object can belong to more than one class. In other words, classes are not mutually exclusive. For example, a given piece of text might be categorized both as "Science" and "Health".
 
-This is in contrast to multi-class classification, where each object is categorized into one of many classes, and binary classification, where each object is categorized into one of two classes.
+This is in contrast to multi-class classification, where each object is categorized into one of many classes, and binary classification, where each object is categorized into one of two classes. If you want to read more, please have a look at the [sklearn documentation](https://scikit-learn.org/stable/modules/multiclass.html).
 
 In the context of this project, the aim is to improve the performance of multi-label classifiers. This could mean increasing the accuracy of the classifier, reducing the computational cost, or improving some other performance metric. The MCTS algorithm is used to make more informed decisions about which labels should be assigned to each object, potentially improving the performance of the classifier.
 
@@ -73,7 +76,8 @@ This project is licensed under the MIT License. See the [`LICENSE`](LICENSE) fil
 ## Contributing
 
 Contributions to the project are welcome. Please make sure to follow the coding standards specified in the [`setup.cfg`]("setup.cfg") file under the `[flake8]` section.
-This repository is that of my bachelor thesis.
+
+This repository is part of my bachelor thesis at Ecole Polytechnique's Bachelor of Science. It consists of an 8 to 10 week long full time research internship following a topic linked to one of our double major - Mathematics and Computer Science in my case. I am under supervision of Professor Jesse READ, from LIX. See his [webpage](https://jmread.github.io/index.html) for more details about his works in research and teaching.
 
 
 ## Status
