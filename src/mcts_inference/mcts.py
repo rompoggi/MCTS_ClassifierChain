@@ -6,10 +6,7 @@ The tree is built by expanding the nodes and propagating the rewards back up the
 There are different policies to select the next node to visit, such as epsilon greedy here.
 
 TODOS:
-    - Add more examples
-    - Add more tests
-
-    - Implement more Policies
+    - Add tests
 """
 
 import numpy as np
@@ -220,43 +217,115 @@ class MCTSNode:
                 return False
         return True
 
-    def normalize_proba(self, opt: NormOption = NormOption.SOFTMAX) -> None:
-        """
-        Normalizes the rewards obtained at each node into a distribution
-
-        Examples:
-            >>> node = MCTSNode(label=0, rank=2, n_children=2, score=0.5, parent=None, parent_labels=[])
-            >>> node.expand()
-            >>> node.children[0].score = 0.
-            >>> node.children[1].score = 2.
-            >>> node.normalize_proba(opt=NormOption.SOFTMAX)
-            >>> node.children[0].score
-            0.0
-            >>> node.children[1].score
-            1.0
-        """
-        if self.is_terminal():
-            return
-        scores: np.ndarray[Any, np.dtype[Any]] = np.array([child.score for child in self.children])
-
-        if opt == NormOption.SOFTMAX:
-            scores = np.exp(scores)
-        elif opt == NormOption.UNIFORM:
-            pass
-        elif opt == NormOption.NONE:
-            pass  # Do nothing
-
-        if opt != NormOption.NONE:
-            scores /= np.sum(scores)
-
-        for i, child in enumerate(self.children):
-            child.score = scores[i]
-
+    def get_children_scores(self) -> np.ndarray[Any, np.dtype[np.float64]]:
         """
         Get the scores of the children nodes
         """
         assert (self.is_expanded()), "Node not yet expanded. Cannot get the children scores."
-        return [child.score for child in self.children]
+        return np.array([child.score for child in self.children], dtype=np.float64)
+
+    def get_children_counts(self) -> np.ndarray[Any, np.dtype[np.int64]]:
+        """
+        Get the scores of the children nodes
+        """
+        assert (self.is_expanded()), "Node not yet expanded. Cannot get the children scores."
+        return np.array([child.visit_count for child in self.children], dtype=np.int64)
+
+
+###################################################################################################
+# End of the MCTSNode class methods. We define other functions to be used with the MCTSNode class #
+###################################################################################################
+
+def visualize_tree(root: MCTSNode, best_child: Optional[list[int]] = None, name: str = "binary_tree", save: bool = False) -> None:
+    """
+    Visualize the search tree using the graphviz library.
+
+    Args:
+        root (MCTSNode): The root node of the tree
+        with_path (bool): If True, the best path will be highlighted in red
+        name (str): The name of the file to save the visualization
+
+    Returns:
+        None
+    """
+    dot = Digraph()
+
+    def add_nodes_edges(node: MCTSNode) -> None:
+        dot.node(str(id(node)), label=f"{node.label}, {node.visit_count}")
+        if node.children:
+            for child in node.children:
+                dot.edge(str(id(node)), str(id(child)), label=f"{child.score:.3f}")
+                add_nodes_edges(child)
+
+    add_nodes_edges(root)
+
+    if best_child is not None:
+        for i in range(len(best_child)):
+            current_node_id = str(id(root))
+            next_node_id = str(id(root.children[best_child[i]]))
+            dot.edge(current_node_id, next_node_id, color="red")
+            root = root.children[best_child[i]]
+
+        dot.render(name + 'with_path', format='png', view=True, cleanup=not (save))
+        return
+
+    dot.render(name, format='png', view=True, cleanup=not (save))
+
+
+def normalize_proba(root: MCTSNode, opt: NormOption = NormOption.SOFTMAX) -> None:
+    """
+    Normalizes the rewards obtained at each node into a distribution
+
+    Examples:
+        >>> node = MCTSNode(label=0, rank=2, n_children=2, score=0.5, parent=None, parent_labels=[])
+        >>> node.expand()
+        >>> node.children[0].score = 0.
+        >>> node.children[1].score = 2.
+        >>> node.normalize_proba(opt=NormOption.SOFTMAX)
+        >>> node.children[0].score
+        0.0
+        >>> node.children[1].score
+        1.0
+    """
+    if root.is_terminal():
+        return
+
+    if opt == NormOption.SOFTMAX:
+        _normalize_proba_softmax(root)
+    elif opt == NormOption.UNIFORM:
+        _normalize_proba_uniform(root)
+    elif opt == NormOption.NONE:
+        _normalize_proba_none(root)
+
+
+def _normalize_proba_softmax(node: MCTSNode) -> None:
+    if node.is_terminal():
+        return
+    scores: np.ndarray[Any, np.dtype[np.float64]] = node.get_children_scores()
+    scores = np.exp(scores)
+    scores /= np.sum(scores)
+
+    for i, child in enumerate(node.children):
+        child.score = scores[i]
+
+
+def _normalize_proba_uniform(node: MCTSNode) -> None:
+    if node.is_terminal():
+        return
+    scores: np.ndarray[Any, np.dtype[np.float64]] = node.get_children_scores()
+    scores /= np.sum(scores)
+
+    for i, child in enumerate(node.children):
+        child.score = scores[i]
+
+
+def _normalize_proba_none(node: MCTSNode) -> None:
+    if node.is_terminal():
+        return
+    pass  # Do nothing
+
+
+############################
 
 
 # @debug
@@ -460,51 +529,18 @@ def MCTS(model, x, verbose: bool = False, secs: float = 1, visualize: bool = Fal
         reward: float = simulate(node, model, x, cache)
         back_prog(node, reward)
 
-    visualize_tree(root, with_path=True, name="binary_tree", save=save) if visualize else None
+    if visualize:
+        bc: list[int] = best_child(root)
+        visualize_tree(root, best_child=bc, name="binary_tree", save=save)
+        return bc
+
     return best_child(root)
-
-
-def visualize_tree(root: MCTSNode, with_path: bool = False, name: str = "binary_tree", save: bool = False) -> None:
-    """
-    Visualize the search tree using the graphviz library.
-
-    Args:
-        root (MCTSNode): The root node of the tree
-        with_path (bool): If True, the best path will be highlighted in red
-        name (str): The name of the file to save the visualization
-
-    Returns:
-        None
-    """
-    dot = Digraph()
-
-    def add_nodes_edges(node: MCTSNode) -> None:
-        dot.node(str(id(node)), label=f"{node.label}, {node.visit_count}")
-        if node.children:
-            for child in node.children:
-                dot.edge(str(id(node)), str(id(child)), label=f"{child.score:.3f}")
-                add_nodes_edges(child)
-
-    add_nodes_edges(root)
-
-    if with_path:
-        path: list[int] = best_child(root)
-        for i in range(len(path)):
-            current_node_id = str(id(root))
-            next_node_id = str(id(root.children[path[i]]))
-            dot.edge(current_node_id, next_node_id, color="red")
-            root = root.children[path[i]]
-
-        dot.render(name + 'with_path', format='png', view=True, cleanup=not (save))
-        return
-
-    dot.render(name, format='png', view=True, cleanup=not (save))
 
 
 __all__: list[str] = ["MCTSNode", "MCTS", "randmax", "eps_greedy",
                       "ucb", "select", "back_prog",
                       "simulate", "get_reward", "best_child",
-                      "visualize_tree"]
+                      "visualize_tree", "normalize_proba"]
 
 if __name__ == "__main__":
     from sklearn.datasets import make_multilabel_classification
