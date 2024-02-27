@@ -26,18 +26,21 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install tox tox-gh-actions
-          
+
       - name: Test with tox
-        run: |
-          tox
-  
+        run: tox
+
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          flags: smart-tests
-          token: ${{ secrets.CODECOV_TOKEN }}
-          handle_no_reports_found: true
-          verbose: true
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-          slug: rompoggi/MCTS_ClassifierChain
+        run: |
+          os_name=$(echo "${{ matrix.os }}" | awk -F- '{print $1}')  # Extract the OS name
+          # Map GitHub Actions OS names to Codecov OS names
+          if [ "$os_name" = "windows" ]; then
+            codecov_os="windows"
+          elif [ "$os_name" = "macos" ]; then
+            codecov_os="macos"
+          else
+            codecov_os="linux"
+          fi
+          curl -Os https://uploader.codecov.io/latest/$codecov_os/codecov
+          chmod +x codecov
+          ./codecov -t ${CODECOV_TOKEN}
