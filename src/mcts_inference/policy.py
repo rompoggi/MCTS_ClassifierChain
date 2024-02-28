@@ -1,7 +1,54 @@
-from .mcts import randmax
-from .mcts_node import MCTSNode
+"""
+Policy module
+Implement the different policies to select the next node to visit in the MCTS algorithm.
+Policies:
+- Uniform
+- Greedy
+- EpsGreedy
+- UCB
+- Thompson_Sampling
+
+Examples:
+- Create a Uniform policy:
+>>> uniform = Uniform()
+>>> print(uniform)
+Uniform
+
+- Create a Greedy policy:
+>>> greedy = Greedy()
+>>> print(greedy)
+Greedy
+
+- Create an EpsGreedy policy:
+>>> eps_greedy = EpsGreedy(epsilon=0.1)
+>>> print(eps_greedy)
+EpsGreedy(epsilon=0.1)
+
+- Create a UCB policy:
+>>> ucb = UCB(alpha=0.5)
+>>> print(ucb)
+UCB(alpha=0.5)
+
+- Create a Thompson_Sampling policy:
+>>> ts = Thompson_Sampling(a=1., b=1.)
+>>> print(ts)
+Thompson_Sampling(a=1., b=1.)
+
+- Select the next node to visit using any of the policy:
+>>> node = MCTSNode(label=0, rank=2, n_children=2, score=0.5)
+>>> node.expand()
+>>> node[1].score = 0.5
+>>> eps_greedy(node)
+1
+>>> ucb(node)
+1
+"""
+
 import numpy as np
 from typing import Any
+
+from .mcts_node import MCTSNode
+from .utils import randmax
 
 
 class Policy:

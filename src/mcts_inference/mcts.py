@@ -15,25 +15,7 @@ from typing import Any, Dict, Tuple
 
 from .constraints import Constraint
 from .mcts_node import MCTSNode, visualize_tree
-
-
-def randmax(A: Any) -> int:
-    """
-    Function to return the index of the element with highest score in A.
-
-    Args:
-        A (Any): The list of MCTSNode
-
-    Examples:
-        >>> node = MCTSNode(label=0, rank=2, n_children=2, score=0.5, parent=None, parent_labels=[])
-        >>> node.expand()
-        >>> node[1].score = 0.5
-        >>> randmax(node.children)
-        1
-    """
-    maxValue: Any = max(A)
-    index: list[int] = [i for i in range(len(A)) if A[i] == maxValue]
-    return int(np.random.choice(index))
+from .utils import randmax
 
 
 def eps_greedy(node: MCTSNode, eps: float = 0.1) -> int:  # pragma: no cover

@@ -8,6 +8,26 @@ NormOption is an enum to represent the different normalization options for the M
 
 from enum import Enum
 from typing import Any, Callable
+import numpy as np
+
+
+def randmax(A: Any) -> int:
+    """
+    Function to return the index of the element with highest value in A, breaking ties randomly.
+
+    Args:
+        A (Any): The array from which to select the index of the element with the highest value
+
+    Examples:
+        >>> node = MCTSNode(label=0, rank=2, n_children=2)
+        >>> node.expand()
+        >>> node[0].score = 0.5
+        >>> randmax(node.get_children_scores())
+        0
+    """
+    maxValue: Any = max(A)
+    index: list[int] = [i for i in range(len(A)) if A[i] == maxValue]
+    return int(np.random.choice(index))
 
 
 class NormOption(Enum):
@@ -46,4 +66,4 @@ def debug(func) -> Callable[..., Any]:
     return wrapper
 
 
-__all__: list[str] = ['NormOption', 'debug']
+__all__: list[str] = ['randmax', 'NormOption', 'debug']
