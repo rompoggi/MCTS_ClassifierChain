@@ -1,4 +1,8 @@
-from typing import Optional, Any, List, TypeVar
+"""
+Implementation of the MCTSNode class to represent a node in the MCTS algorithm.
+"""
+
+from typing import Any, List, Optional, TypeVar
 import numpy as np
 from graphviz import Digraph
 
@@ -37,7 +41,7 @@ class MCTSNode:
         is_terminal(self) -> bool: Returns True if the node is a terminal node, False otherwise
         is_expanded(self) -> bool: Returns True if the node is expanded, False otherwise
         expand(self) -> None: Expand the node by creating its children
-        get_parent_labels(self) -> list[int]: Get the labels of the parent nodes
+        get_parent_labels(self) -> List[int]: Get the labels of the parent nodes
         __str__(self) -> str: String representation of the node
         __repr__(self) -> str: String representation of the node
         print_all(self) -> None: Print all the attributes of the node in a readable format
@@ -122,10 +126,11 @@ class MCTSNode:
         Each child will have a rank one less than the parent node.
         """
         assert (not self.is_terminal()), "Cannot expand a terminal node"
+        assert (not self.is_expanded()), "Node already expanded. Cannot expand again."
         self.children = [MCTSNode(label=i, rank=self.rank-1, n_children=self.n_children,
                                   parent=self, parent_labels=self.parent_labels+[i]) for i in range(self.n_children)]
 
-    def get_parent_labels(self) -> list[int]:
+    def get_parent_labels(self) -> List[int]:
         """
         Get the labels of the parent nodes.
         """
@@ -143,6 +148,14 @@ class MCTSNode:
         String representation of the node
         """
         return str(self)
+
+    def __eq__(self, __value: object) -> bool:
+        """
+        Check if the two nodes are equal
+        """
+        if not isinstance(__value, MCTSNode):
+            return False
+        return (repr(self) == repr(__value))
 
     def print_all(self) -> None:
         """
@@ -222,7 +235,7 @@ class MCTSNode:
 # End of the MCTSNode class methods. We define other functions to be used with the MCTSNode class #
 ###################################################################################################
 
-def visualize_tree(root: MCTSNode, best_child: Optional[list[int]] = None, name: str = "binary_tree", save: bool = False, view: bool = True) -> None:
+def visualize_tree(root: MCTSNode, best_child: Optional[List[int]] = None, name: str = "binary_tree", save: bool = False, view: bool = True) -> None:
     """
     Visualize the search tree using the graphviz library.
 
