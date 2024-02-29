@@ -114,6 +114,8 @@ def test_save_config_invalid_format(constraint) -> None:
 
     config.save_config(temp_file_name, format='json')
 
+    config = MCTSConfig(path=temp_file_name)
+
     with pytest.raises(FileExistsError):
         config.save_config(path=temp_file_name, format='json')
 
@@ -136,5 +138,5 @@ def test_load_config_invalid_format(constraint) -> None:
     with pytest.raises(FileNotFoundError):
         config.load_config(path=temp_file_name)
 
-    if os.path.exists(temp_file_name):
-        os.remove(temp_file_name)
+    with pytest.raises(FileNotFoundError):
+        config = MCTSConfig(path=temp_file_name)
