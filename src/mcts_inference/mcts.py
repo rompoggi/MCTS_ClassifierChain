@@ -11,7 +11,7 @@ TODOS:
 """
 
 import numpy as np
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, List
 
 from .constraints import Constraint
 from .mcts_node import MCTSNode, visualize_tree
@@ -77,7 +77,7 @@ def simulate(node: MCTSNode, policy: Policy = Uniform()) -> MCTSNode:
     return node
 
 
-def get_reward(node: MCTSNode, model: Any, x: Any, cache: Dict[Tuple[int, ...], float] = {}) -> float:  # pragma: no cover
+def get_reward(node: MCTSNode, model: Any, x: Any, cache: Dict[Tuple[int, ...], float] = {}) -> float:
     """
     Get the reward for the given node.
     The reward is obtained from the model that does the inference.
@@ -88,9 +88,9 @@ def get_reward(node: MCTSNode, model: Any, x: Any, cache: Dict[Tuple[int, ...], 
         x (Any): The input data
         cache (Dict[list[int], float]): The cache to store the reward evaluation
     """
-    assert hasattr(model, 'predict_proba'), "Model must have a predict_proba method"
+    assert all(hasattr(est, 'predict_proba') for est in model.estimators_), "Model must have a predict_proba method"
 
-    labels: list[int] = node.get_parent_labels()
+    labels: List[int] = node.get_parent_labels()
     if (tuple(labels)) in cache:
         return cache[tuple(labels)]
 
@@ -111,7 +111,45 @@ def get_reward(node: MCTSNode, model: Any, x: Any, cache: Dict[Tuple[int, ...], 
     return p
 
 
-def best_child(root: MCTSNode, policy: Policy = Greedy()) -> list[int]:  # best score
+def _get_reward(node: MCTSNode, model: Any, x: Any, cache: Dict[Tuple[int, ...], float] = {}, ys: List[int] = []) -> float:  # pragma: no cover
+    """
+    Get the reward for the given node.
+    The reward is obtained from the model that does the inference.
+
+    Args:
+        node (MCTSNode): The node for which to get the reward
+        model (Any): The model to use for the reward evaluation, which has the predict_proba method
+        x (Any): The input data
+        cache (Dict[list[int], float]): The cache to store the reward evaluation
+    """
+    assert all(hasattr(est, 'predict_proba') for est in model.estimators_), "Model must have a predict_proba method"
+
+    labels: List[int] = node.get_parent_labels()
+    if (tuple(labels)) in cache:
+        return cache[tuple(labels)]
+
+    assert (node.is_terminal()), f"Can only get rewards for a terminal node. Node rank={node.rank}."
+    labels = node.get_parent_labels()
+    xy: np.ndarray[Any, np.dtype[Any]] = x.reshape(1, -1)
+    p: float = 1.0
+
+    for y in ys:
+        xy = np.column_stack([xy, y])
+
+    k: int = len(ys)
+    for j in range(len(labels)):
+        if j > 0:
+            # stack the previous y as an additional feature
+            xy = np.column_stack([xy, labels[j-1]])
+
+        p *= model.estimators_[j+k].predict_proba(xy)[0][labels[j]]  # (N.B. [0], because it is the first and only row)
+
+    cache[tuple(labels)] = p
+
+    return p
+
+
+def best_child(root: MCTSNode, policy: Policy = Greedy()) -> list[int]:  # pragma: no cover, will be deprecated
     """
     Returns the labels of the best child of the root node following a greedy policy.
 
@@ -121,7 +159,19 @@ def best_child(root: MCTSNode, policy: Policy = Greedy()) -> list[int]:  # best 
     return select(root, policy).get_parent_labels()
 
 
-def MCTS(model, x, verbose: bool = False, secs: float = 1, visualize: bool = False, save: bool = False) -> list[int]:  # pragma: no cover
+def _best_child(node: MCTSNode, policy: Policy = Greedy()) -> int:  # pragma: no cover, needs to be used in main algorithm
+    """
+    Returns the labels of the best child of the root node following a greedy policy.
+
+    Args:
+        node (MCTSNode): The root node from which to select the best child
+        policy (Policy): The policy to use to select the best child
+    """
+    res: int | None = node[policy(node)].label
+    return res if (res is not None) else -1
+
+
+def _MCTS(model, x, verbose: bool = False, secs: float = 1, visualize: bool = False, save: bool = False) -> List[int]:  # pragma: no cover
     """
     Monte Carlo Tree Search alogrithm.
 
@@ -136,7 +186,49 @@ def MCTS(model, x, verbose: bool = False, secs: float = 1, visualize: bool = Fal
         list[int]: The labels of the best child of the root node following a greedy policy
     """
     n_classes: int = len(model.estimators_)
-    root: MCTSNode = MCTSNode(label=None, n_children=2, rank=n_classes, score=1)
+    ComputationalConstraint: Constraint = Constraint(time=True, d_time=secs, max_iter=False, n_iter=0, verbose=verbose)
+
+    select_policy: Policy = EpsGreedy(epsilon=0.3)
+    simulate_policy: Policy = Uniform()
+    best_child_policy: Policy = Greedy()
+
+    ys: List[int] = []
+    for k in range(n_classes):
+        root: MCTSNode = MCTSNode(label=None, n_children=2, rank=n_classes-k, score=1.)
+        cache: Dict[Tuple[int, ...], float] = {}  # Create a cache to store the reward evaluation to gain inference speed
+
+        ComputationalConstraint.reset()
+        while (ComputationalConstraint):
+            node: MCTSNode = select(root, policy=select_policy)
+            node = simulate(node, policy=simulate_policy)
+            reward: float = _get_reward(node, model, x, cache, ys=ys)
+            back_prog(node, reward)
+
+        bc: int = _best_child(root, policy=best_child_policy)
+        ys.append(bc)
+
+        if visualize:
+            visualize_tree(root, best_child=[bc], name=f"binary_tree_{k}", save=save)
+
+    return ys
+
+
+def MCTS(model, x, verbose: bool = False, secs: float = 1, visualize: bool = False, save: bool = False) -> list[int]:  # pragma: no cover, will be deprecated
+    """
+    Monte Carlo Tree Search alogrithm.
+
+    Args:
+        model (Any): The model to use for the MCTS algorithm
+        x (Any): The input data
+        verbose (bool): If True, the constraints will print a message when they are reached
+        secs (float): The time constraint in seconds
+        visualize (bool): If True, the search tree will be visualized
+
+    Returns:
+        list[int]: The labels of the best child of the root node following a greedy policy
+    """
+    n_classes: int = len(model.estimators_)
+    root: MCTSNode = MCTSNode(label=None, n_children=2, rank=n_classes, score=1.)
 
     ComputationalConstraint: Constraint = Constraint(time=True, d_time=secs, max_iter=False, n_iter=0, verbose=verbose)
 
