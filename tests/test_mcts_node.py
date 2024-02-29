@@ -293,7 +293,7 @@ def test_normalize_score_none() -> None:
 ######################################################################
 #                          visualize_tree                            #
 ######################################################################
-# @pytest.mark.skip(reason="Bug with graphviz")
+@pytest.mark.skip(reason="Bug with graphviz")
 def test_visualize_tree() -> None:
     root = MCTSNode(label=None, rank=2, n_children=2)
     with pytest.raises(AssertionError):
