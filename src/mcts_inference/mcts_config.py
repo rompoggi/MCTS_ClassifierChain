@@ -13,8 +13,8 @@ from .policy import Policy, EpsGreedy, Uniform, Greedy
 
 class MCTSConfig:
     def __init__(self,
-                 n_classes: int,
-                 constraint: Constraint,
+                 n_classes: int = 2,
+                 constraint: Constraint = Constraint(time=True, d_time=1.),
                  selection_policy: Policy = EpsGreedy(),
                  exploration_policy: Policy = Uniform(),
                  best_child_policy: Policy = Greedy(),
