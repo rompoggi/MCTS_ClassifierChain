@@ -34,6 +34,8 @@ if __name__ == "__main__":  # pragma: no cover
 
     secs_lis: list[float] = [0.01, 0.1]  # , 0.5, 1., 2.]
 
+    MCTS(chain, X_test[0], secs=0.1, visualize=True, save=False)
+
     M: int = min(100, len(Y_test))
 
     hl_mt: list[float] = []
@@ -44,9 +46,13 @@ if __name__ == "__main__":  # pragma: no cover
     zo_ct: list[float] = []
     zo_mc: list[float] = []
 
+    run: bool = False
+    run = False
+
     y_chain = chain.predict(X_test[:M])
     for secs in secs_lis:
-        # continue
+        if not run:
+            break
         _y_mcts = []
 
         for i in trange(M, desc=f"MCTS Inference Constraint={secs}s", unit="it", colour="green"):
@@ -62,26 +68,27 @@ if __name__ == "__main__":  # pragma: no cover
         zo_ct.append(zero_one_loss(y_chain, Y_test[:M]))
         zo_mc.append(zero_one_loss(y_chain, y_mcts))
 
-    import matplotlib.pyplot as plt
+    if run:
+        import matplotlib.pyplot as plt
 
-    plt.plot(secs_lis, hl_mt, label="MCTS vs True")
-    plt.plot(secs_lis, hl_ct, label="Chains vs True")
-    plt.plot(secs_lis, hl_mc, label="MCTS vs Chains")
+        plt.plot(secs_lis, hl_mt, label="MCTS vs True")
+        plt.plot(secs_lis, hl_ct, label="Chains vs True")
+        plt.plot(secs_lis, hl_mc, label="MCTS vs Chains")
 
-    plt.title("Hamming Loss Comparison for different times")
-    plt.xlabel("Seconds")
-    plt.ylim(0, 1)
-    plt.ylabel("Hamming Loss")
-    plt.legend()
-    plt.show()
+        plt.title("Hamming Loss Comparison for different times")
+        plt.xlabel("Seconds")
+        plt.ylim(0, 1)
+        plt.ylabel("Hamming Loss")
+        plt.legend()
+        plt.show()
 
-    plt.plot(secs_lis, zo_mt, label="MCTS vs True")
-    plt.plot(secs_lis, zo_ct, label="Chains vs True")
-    plt.plot(secs_lis, zo_mc, label="MCTS vs Chains")
+        plt.plot(secs_lis, zo_mt, label="MCTS vs True")
+        plt.plot(secs_lis, zo_ct, label="Chains vs True")
+        plt.plot(secs_lis, zo_mc, label="MCTS vs Chains")
 
-    plt.title("Zero One Loss Comparison for time different times")
-    plt.xlabel("Seconds")
-    plt.ylim(0, 1)
-    plt.ylabel("Zero One Loss")
-    plt.legend()
-    plt.show()
+        plt.title("Zero One Loss Comparison for time different times")
+        plt.xlabel("Seconds")
+        plt.ylim(0, 1)
+        plt.ylabel("Zero One Loss")
+        plt.legend()
+        plt.show()
