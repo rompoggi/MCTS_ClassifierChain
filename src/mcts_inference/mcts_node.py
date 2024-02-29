@@ -234,8 +234,11 @@ class MCTSNode:
 ###################################################################################################
 # End of the MCTSNode class methods. We define other functions to be used with the MCTSNode class #
 ###################################################################################################
-
-def visualize_tree(root: MCTSNode, best_child: Optional[List[int]] = None, name: str = "binary_tree", save: bool = False, view: bool = True) -> None:
+def visualize_tree(root: MCTSNode,
+                   best_child: Optional[List[int]] = None,
+                   name: str = "binary_tree",
+                   save: bool = False,
+                   view: bool = True) -> None:  # pragma: no cover
     """
     Visualize the search tree using the graphviz library.
 
