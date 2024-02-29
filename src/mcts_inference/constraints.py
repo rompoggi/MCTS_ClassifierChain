@@ -1,4 +1,5 @@
 from time import time
+from typing import Any
 
 
 class Constraint:
@@ -106,6 +107,20 @@ curr_iter={self.curr_iter}, verbose={self.verbose}"
 
     def __repr__(self) -> str:
         return str(self)
+
+    def __eq__(self, __value: object) -> bool:
+        if not isinstance(__value, Constraint):
+            return False
+        return self.to_dict() == __value.to_dict()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            'time': self.time,
+            'd_time': self.d_time,
+            'verbose': self.verbose,
+            'max_iter': self.max_iter,
+            'n_iter': self.n_iter,
+        }
 
 
 __all__: list[str] = ['Constraint']
