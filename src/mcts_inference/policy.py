@@ -55,7 +55,7 @@ class Policy:
     def __init__(self) -> None:
         pass
 
-    def __call__(self, node: MCTSNode) -> Any:
+    def __call__(self, node: MCTSNode) -> int:
         raise NotImplementedError("Policy.__call__ method not implemented.")
 
     def name(self) -> str:
@@ -67,12 +67,18 @@ class Policy:
     def __repr__(self) -> str:
         raise NotImplementedError("Policy.__repr__ method not implemented.")
 
+    def to_dict(self) -> dict[str, str]:
+        raise NotImplementedError("Policy.to_dict method not implemented.")
+
+    def __eq__(self, other) -> bool:
+        return (repr(self) == repr(other))
+
 
 class Uniform(Policy):
     def __init__(self) -> None:
         super().__init__()
 
-    def __call__(self, node: MCTSNode) -> Any:
+    def __call__(self, node: MCTSNode) -> int:
         """
         Uniform policy to select the next node to visit.
 
@@ -99,12 +105,18 @@ class Uniform(Policy):
     def __repr__(self) -> str:
         return str(self)
 
+    def to_dict(self) -> dict[str, str]:
+        return {
+            'class': self.__class__.__name__,
+            'repr': "Uniform()"
+        }
+
 
 class Greedy(Policy):
     def __init__(self) -> None:
         super().__init__()
 
-    def __call__(self, node: MCTSNode) -> Any:
+    def __call__(self, node: MCTSNode) -> int:
         """
         Greedy policy to select the next node to visit.
 
@@ -130,6 +142,12 @@ class Greedy(Policy):
     def __repr__(self) -> str:
         return str(self)
 
+    def to_dict(self) -> dict[str, str]:
+        return {
+            'class': self.__class__.__name__,
+            'repr': "Greedy()"
+        }
+
 
 class EpsGreedy(Policy):
     """
@@ -140,7 +158,7 @@ class EpsGreedy(Policy):
         assert (epsilon >= 0 and epsilon <= 1), f"{epsilon = } should be in the [0,1] range."
         self.epsilon: float = epsilon
 
-    def __call__(self, node: MCTSNode) -> Any:
+    def __call__(self, node: MCTSNode) -> int:
         """
         Epislon-Greedy policy to select the next node to visit.
 
@@ -168,13 +186,20 @@ class EpsGreedy(Policy):
     def __repr__(self) -> str:
         return str(self)
 
+    def to_dict(self) -> dict[str, str]:
+        return {
+            'class': self.__class__.__name__,
+            'epsilon': f"{self.epsilon}",
+            'repr': f"EpsGreedy(epsilon={self.epsilon})"
+        }
+
 
 class UCB(Policy):
     def __init__(self, alpha: float = 0.5) -> None:
         super().__init__()
         self.alpha: float = alpha
 
-    def __call__(self, node: MCTSNode) -> Any:
+    def __call__(self, node: MCTSNode) -> int:
         """
         Upper Confidence Bound (UCB) policy to select the next node to visit.
 
@@ -208,6 +233,13 @@ class UCB(Policy):
     def __repr__(self) -> str:
         return str(self)
 
+    def to_dict(self) -> dict[str, str]:
+        return {
+            'class': self.__class__.__name__,
+            'alpha': f"{self.alpha}",
+            'repr': f"UCB(alpha={self.alpha})"
+        }
+
 
 class Thompson_Sampling(Policy):
     def __init__(self, a: float = 1., b: float = 1.) -> None:
@@ -215,7 +247,7 @@ class Thompson_Sampling(Policy):
         self.a: float = a
         self.b: float = b
 
-    def __call__(self, node: MCTSNode) -> Any:
+    def __call__(self, node: MCTSNode) -> int:
         """
         Thompson Sampling policy to select the next node to visit.
 
@@ -247,6 +279,14 @@ class Thompson_Sampling(Policy):
 
     def __repr__(self) -> str:
         return str(self)
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            'class': self.__class__.__name__,
+            'a': f"{self.a}",
+            'b': f"{self.b}",
+            'repr': f"Thompson_Sampling(a={self.a}, b={self.b})"
+        }
 
 
 __all__: list[str] = ["Policy", "Uniform", "Greedy", "EpsGreedy", "UCB", "Thompson_Sampling"]

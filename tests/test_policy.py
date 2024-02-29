@@ -3,7 +3,7 @@ Test file for the policy module.
 """
 
 import pytest
-from mcts_inference.mcts import MCTSNode
+from mcts_inference.mcts_node import MCTSNode
 from mcts_inference.policy import Policy, Uniform, Greedy, EpsGreedy, UCB, Thompson_Sampling
 import numpy as np
 
@@ -101,6 +101,8 @@ def test_policy() -> None:
         policy.__str__()
     with pytest.raises(NotImplementedError):
         policy.__repr__()
+    with pytest.raises(NotImplementedError):
+        policy.to_dict()
 
 
 ######################################################################
@@ -112,6 +114,16 @@ def test_Uniform(k) -> None:
     node.expand()
     uniform = Uniform()
     assert (uniform(node) in set(range(k)))
+
+
+def test_uniform_to_dict() -> None:
+    uniform = Uniform()
+    result = uniform.to_dict()
+    expected_result = {
+        'class': 'Uniform',
+        'repr': "Uniform()"
+    }
+    assert result == expected_result, f"Expected {expected_result} but got {result}"
 
 
 ######################################################################
@@ -132,6 +144,16 @@ def test_Greedy_no_score(k) -> None:
     node.expand()
     greedy = Greedy()
     assert (greedy(node) in set(range(k)))
+
+
+def test_greedy_to_dict() -> None:
+    greedy = Greedy()
+    result = greedy.to_dict()
+    expected_result = {
+        'class': 'Greedy',
+        'repr': "Greedy()"
+    }
+    assert result == expected_result, f"Expected {expected_result} but got {result}"
 
 
 ######################################################################
@@ -158,6 +180,21 @@ def test_EpsGreedy_eps0(k) -> None:
     node.children[k-1].score = 1.0
     eps = EpsGreedy(epsilon=0.0)
     assert (eps(node) == k-1)
+
+
+epsilon_values = [0.1, 0.5, 1.0]
+
+
+@pytest.mark.parametrize("epsilon", epsilon_values)
+def test_EpsGreedy_to_dict(epsilon) -> None:
+    eps = EpsGreedy(epsilon=epsilon)
+    result = eps.to_dict()
+    expected_result = {
+        'class': 'EpsGreedy',
+        'epsilon': f"{epsilon}",
+        'repr': f"EpsGreedy(epsilon={epsilon})"
+    }
+    assert result == expected_result, f"For epsilon={epsilon}, expected {expected_result} but got {result}"
 
 
 ######################################################################
@@ -215,6 +252,19 @@ def test_ucb_same_count(score, success) -> None:
     assert ((ucb(node) == (k-1)) == success)
 
 
+def test_ucb_to_dict() -> None:
+    alpha_values = [0.1, 0.5, 1.0, 2.0]
+    for alpha in alpha_values:
+        ucb = UCB(alpha=alpha)
+        result = ucb.to_dict()
+        expected_result = {
+            'class': 'UCB',
+            'alpha': f"{alpha}",
+            'repr': f"UCB(alpha={alpha})"
+        }
+        assert result == expected_result, f"For alpha={alpha}, expected {expected_result} but got {result}"
+
+
 ######################################################################
 #                          Thompson Sampling                         #
 ######################################################################
@@ -250,3 +300,16 @@ def test_thompson(k, seed_out) -> None:
     node.visit_count = 15
     np.random.seed(0)
     assert (thompson(node) == seed_out)
+
+
+@pytest.mark.parametrize("a, b", [(1.0, 1.0), (0.5, 0.5), (2.0, 3.0)])
+def test_thompson_sampling_to_dict(a, b) -> None:
+    thompson_sampling = Thompson_Sampling(a=a, b=b)
+    result = thompson_sampling.to_dict()
+    expected_result = {
+        'class': 'Thompson_Sampling',
+        'a': f"{a}",
+        'b': f"{b}",
+        'repr': f"Thompson_Sampling(a={a}, b={b})"
+    }
+    assert result == expected_result, f"For a={a}, b={b}, expected {expected_result} but got {result}"
