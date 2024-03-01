@@ -2,11 +2,12 @@
 Test file for the mcts module.
 """
 
+from unittest import mock
 import numpy as np
 import pytest
 from typing import List, Tuple, Dict, Any
 
-from mcts_inference.mcts import select, back_prog, simulate, get_reward
+from mcts_inference.mcts import select, back_prog, simulate, get_reward, best_child, best_child_all, _all_step_MCTS_wrapper, _one_step_MCTS_wrapper
 from mcts_inference.mcts_node import MCTSNode
 from mcts_inference.policy import Policy, Uniform, Greedy
 
@@ -171,6 +172,13 @@ def test_get_reward_terminal_node(root) -> None:
     assert (reward == val2 ** root.rank), "get_reward should return the correct reward for a terminal node"
     assert (cache == {(0, 0): val1 ** root.rank, (0, 1): val2 ** root.rank})
 
+    node = root[1]
+    node.parent_labels = []
+    node[0].parent_labels = [1]
+    node.parent = None
+    reward = get_reward(node[0], model2, x, cache, ys=[1])
+    assert (reward == val2 ** root.rank)
+
 
 def test_has_predict_proba(root) -> None:
     model = DummyModel(2, 0.5, 2)
@@ -182,34 +190,67 @@ def test_has_predict_proba(root) -> None:
 ######################################################################
 #                           best_child                               #
 ######################################################################
-# def test_best_child_root_node() -> None:
-#     policy: Policy = Greedy()
-#     root: MCTSNode = MCTSNode(label=None, n_children=2, rank=1, score=0.)
-#     root.expand()
-#     root.visit_count += 1
-#     root[0].visit_count += 1
-#     root[1].visit_count += 1
-#     root[0].score = 1.0
-#     root[1].score = 2.0
-#     assert (best_child(root, policy) == [1]), "best_child should return the labels of the child with the highest score"
+def test_best_child_root_node() -> None:
+    policy: Policy = Greedy()
+    root: MCTSNode = MCTSNode(label=None, n_children=2, rank=1, score=0.)
+    root.expand()
+    root.visit_count += 1
+    root[0].visit_count += 1
+    root[1].visit_count += 1
+    root[0].score = 1.0
+    root[1].score = 2.0
+    assert (best_child(root, policy) == 1), "best_child should return the labels of the child with the highest score"
+    assert (best_child_all(root, policy) == [1]), "best_child should return the labels of the child with the highest score"
 
 
-# def test_best_child_non_root_node() -> None:
-#     policy: Policy = Greedy()
-#     root: MCTSNode = MCTSNode(label=None, n_children=2, rank=1, score=0.)
-#     root.expand()
-#     root.visit_count += 1
-#     root[0].visit_count += 1
-#     root[1].visit_count += 1
-#     node: MCTSNode = root[0]
-#     node.expand()
-#     node[0].score = 1.0
-#     node[1].score = 2.0
-#     assert (best_child(node, policy) == [0, 1]), "best_child should return the labels of the child with the highest score"
+def test_best_child_non_root_node() -> None:
+    policy: Policy = Greedy()
+    root: MCTSNode = MCTSNode(label=None, n_children=2, rank=2, score=0.)
+    root.expand()
+    root.visit_count += 1
+    root[0].visit_count += 1
+    root[1].visit_count += 1
+    node: MCTSNode = root[0]
+    node.expand()
+    node[0].score = 1.0
+    node[1].score = 2.0
+    assert (best_child_all(node, policy) == [0, 1]), "best_child should return the labels of the child with the highest score"
 
 
-# def test_best_child_no_children() -> None:
-#     policy: Policy = Greedy()
-#     node: MCTSNode = MCTSNode(label=0, n_children=2, rank=1, score=0.)
-#     with pytest.raises(AssertionError):
-#         best_child(node, policy)
+def test_best_child_no_children() -> None:
+    policy: Policy = Greedy()
+    node: MCTSNode = MCTSNode(label=0, n_children=2, rank=1, score=0.)
+    with pytest.raises(AssertionError):
+        best_child(node, policy)
+
+
+######################################################################
+#                     _all_step_MCTS_wrapper                         #
+######################################################################
+def test_all_step_MCTS_wrapper() -> None:
+    # Mock the _all_step_MCTS function
+    with mock.patch('mcts_inference.mcts._all_step_MCTS', return_value=[1, 2, 3]) as mock_all_step_MCTS:
+        result = _all_step_MCTS_wrapper((1, 'a', True))
+        mock_all_step_MCTS.assert_called_once_with(1, 'a', True)
+        assert result == [1, 2, 3], "_all_step_MCTS_wrapper should return the same result as _all_step_MCTS"
+
+    with mock.patch('mcts_inference.mcts._all_step_MCTS', return_value=[4, 5, 6]) as mock_all_step_MCTS:
+        result = _all_step_MCTS_wrapper(('test', 2.5, False))
+        mock_all_step_MCTS.assert_called_once_with('test', 2.5, False)
+        assert result == [4, 5, 6], "_all_step_MCTS_wrapper should return the same result as _all_step_MCTS"
+
+
+######################################################################
+#                     _one_step_MCTS_wrapper                         #
+######################################################################
+def test_one_step_MCTS_wrapper() -> None:
+    # Mock the _one_step_MCTS function
+    with mock.patch('mcts_inference.mcts._one_step_MCTS', return_value=[1, 2, 3]) as mock_one_step_MCTS:
+        result = _one_step_MCTS_wrapper((1, 'a', True))
+        mock_one_step_MCTS.assert_called_once_with(1, 'a', True)
+        assert result == [1, 2, 3], "_one_step_MCTS_wrapper should return the same result as _one_step_MCTS"
+
+    with mock.patch('mcts_inference.mcts._one_step_MCTS', return_value=[4, 5, 6]) as mock_one_step_MCTS:
+        result = _one_step_MCTS_wrapper(('test', 2.5, False))
+        mock_one_step_MCTS.assert_called_once_with('test', 2.5, False)
+        assert result == [4, 5, 6], "_one_step_MCTS_wrapper should return the same result as _one_step_MCTS"

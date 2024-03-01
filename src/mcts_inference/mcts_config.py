@@ -23,7 +23,8 @@ class MCTSConfig:
                  normalize_scores: bool = False,
                  normalization_option: Optional[NormOption] = None,
 
-                 parallel: bool = False,
+                 step_once: bool = True,
+                 parallel: bool = True,
 
                  verbose: bool = False,
                  visualize_tree_graph: bool = False,
@@ -51,6 +52,7 @@ class MCTSConfig:
         self._normalization_option: Optional[NormOption] = NormOption(normalization_option) if (normalization_option is not None) else None
 
         self._parallel: bool = parallel
+        self._step_once: bool = step_once
 
         self._verbose: bool = verbose
         self._visualize_tree_graph: bool = visualize_tree_graph
@@ -132,6 +134,15 @@ class MCTSConfig:
 
 #######
     @property
+    def step_once(self) -> bool:
+        return self._step_once
+
+    @step_once.setter
+    def step_once(self, value: bool) -> None:
+        self._step_once = value
+
+#######
+    @property
     def verbose(self) -> bool:
         return self._verbose
 
@@ -171,7 +182,7 @@ class MCTSConfig:
         return f"MCTSConfig(n_classes={self.n_classes}, constraint={self.constraint}, selection_policy={self.selection_policy}, " \
                f"exploration_policy={self.exploration_policy}, best_child_policy={self.best_child_policy}, " \
                f"normalize_scores={self.normalize_scores}, normalization_option={self.normalization_option}, " \
-               f"parallel={self.parallel}, verbose={self.verbose}, visualize_tree_graph={self.visualize_tree_graph}, " \
+               f"parallel={self.parallel}, step_once={self.step_once}, verbose={self.verbose}, visualize_tree_graph={self.visualize_tree_graph}, " \
                f"save_tree_graph={self.save_tree_graph})"
 
     def __repr__(self) -> str:
@@ -188,6 +199,7 @@ class MCTSConfig:
                (self.normalize_scores == other.normalize_scores) and \
                (self.normalization_option == other.normalization_option) and \
                (self.parallel == other.parallel) and \
+               (self.step_once == other.step_once) and \
                (self.verbose == other.verbose) and \
                (self.visualize_tree_graph == other.visualize_tree_graph) and \
                (self.save_tree_graph == other.save_tree_graph)
@@ -212,6 +224,7 @@ class MCTSConfig:
             'normalization_option': self.normalization_option.value if self.normalization_option is not None else None,
 
             'parallel': self.parallel,
+            'step_once': self.step_once,
 
             'verbose': self.verbose,
             'visualize_tree_graph': self.visualize_tree_graph,
@@ -246,3 +259,4 @@ class MonteCarloConfig(MCTSConfig):
         self._exploration_policy = Uniform()
         self._best_child_policy = Greedy()
         self._normalize_scores = False
+        self._step_once = False
