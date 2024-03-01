@@ -2,7 +2,7 @@
 File to store the configuration of the MCTS algorithm.
 """
 
-from typing import Optional
+from typing import Dict, Optional, Any
 import os
 import json
 
@@ -15,12 +15,21 @@ class MCTSConfig:
     def __init__(self,
                  n_classes: int = 2,
                  constraint: Constraint = Constraint(time=True, d_time=1.),
-                 selection_policy: Policy = EpsGreedy(),
+
+                 selection_policy: Policy = EpsGreedy(epsilon=0.2),
                  exploration_policy: Policy = Uniform(),
                  best_child_policy: Policy = Greedy(),
+
                  normalize_scores: bool = False,
                  normalization_option: Optional[NormOption] = None,
-                 path=None,
+
+                 parallel: bool = False,
+
+                 verbose: bool = False,
+                 visualize_tree_graph: bool = False,
+                 save_tree_graph: bool = False,
+
+                 path: Optional[str] = None,
                  format='json',
                  ) -> None:
 
@@ -39,65 +48,151 @@ class MCTSConfig:
         self._normalize_scores: bool = normalize_scores
         if self.normalize_scores and normalization_option is None:
             raise ValueError("Normalization option must be provided if normalize_scores is set to True")
-
         self._normalization_option: Optional[NormOption] = NormOption(normalization_option) if (normalization_option is not None) else None
 
+        self._parallel: bool = parallel
+
+        self._verbose: bool = verbose
+        self._visualize_tree_graph: bool = visualize_tree_graph
+        self._save_tree_graph: bool = save_tree_graph
+
+        self._loaded_from: Optional[str] = None
+
+#######
     @property
     def n_classes(self) -> int:
         return self._n_classes
 
     @n_classes.setter
-    def n_classes(self, value):
+    def n_classes(self, value) -> None:
         self._n_classes = value
 
+#######
     @property
     def constraint(self) -> Constraint:
         return self._constraint
 
     @constraint.setter
-    def constraint(self, value):
+    def constraint(self, value) -> None:
         self._constraint = Constraint(**value)
 
+#######
     @property
     def selection_policy(self) -> Policy:
         return self._selection_policy
 
     @selection_policy.setter
-    def selection_policy(self, value):
+    def selection_policy(self, value) -> None:
         self._selection_policy = eval(value['repr'])
 
+#######
     @property
     def exploration_policy(self) -> Policy:
         return self._exploration_policy
 
     @exploration_policy.setter
-    def exploration_policy(self, value):
+    def exploration_policy(self, value) -> None:
         self._exploration_policy = eval(value['repr'])
 
+#######
     @property
     def best_child_policy(self) -> Policy:
         return self._best_child_policy
 
     @best_child_policy.setter
-    def best_child_policy(self, value):
+    def best_child_policy(self, value) -> None:
         self._best_child_policy = eval(value['repr'])
 
+#######
     @property
     def normalize_scores(self) -> bool:
         return self._normalize_scores
 
     @normalize_scores.setter
-    def normalize_scores(self, value):
+    def normalize_scores(self, value) -> None:
         self._normalize_scores = value
 
+#######
     @property
     def normalization_option(self) -> NormOption | None:
         return self._normalization_option
 
     @normalization_option.setter
-    def normalization_option(self, value):
+    def normalization_option(self, value) -> None:
         self._normalization_option = NormOption(value) if (value is not None) else None
 
+#######
+    @property
+    def parallel(self) -> bool:
+        return self._parallel
+
+    @parallel.setter
+    def parallel(self, value: bool) -> None:
+        self._parallel = value
+
+#######
+    @property
+    def verbose(self) -> bool:
+        return self._verbose
+
+    @verbose.setter
+    def verbose(self, value: bool) -> None:
+        self._verbose = value
+
+#######
+    @property
+    def loaded_from(self) -> Optional[str]:
+        return self._loaded_from
+
+    @loaded_from.setter
+    def loaded_from(self, value: Optional[str]) -> None:
+        self._loaded_from = value
+
+#######
+    @property
+    def visualize_tree_graph(self) -> bool:
+        return self._visualize_tree_graph
+
+    @visualize_tree_graph.setter
+    def visualize_tree_graph(self, value: bool) -> None:
+        self._visualize_tree_graph = value
+
+#######
+    @property
+    def save_tree_graph(self) -> bool:
+        return self._save_tree_graph
+
+    @save_tree_graph.setter
+    def save_tree_graph(self, value: bool) -> None:
+        self._save_tree_graph = value
+
+#################################################################################
+    def __str__(self) -> str:
+        return f"MCTSConfig(n_classes={self.n_classes}, constraint={self.constraint}, selection_policy={self.selection_policy}, " \
+               f"exploration_policy={self.exploration_policy}, best_child_policy={self.best_child_policy}, " \
+               f"normalize_scores={self.normalize_scores}, normalization_option={self.normalization_option}, " \
+               f"parallel={self.parallel}, verbose={self.verbose}, visualize_tree_graph={self.visualize_tree_graph}, " \
+               f"save_tree_graph={self.save_tree_graph})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, self.__class__):
+            return False
+        return (self.n_classes == other.n_classes) and \
+               (self.constraint == other.constraint) and \
+               (self.selection_policy == other.selection_policy) and \
+               (self.exploration_policy == other.exploration_policy) and \
+               (self.best_child_policy == other.best_child_policy) and \
+               (self.normalize_scores == other.normalize_scores) and \
+               (self.normalization_option == other.normalization_option) and \
+               (self.parallel == other.parallel) and \
+               (self.verbose == other.verbose) and \
+               (self.visualize_tree_graph == other.visualize_tree_graph) and \
+               (self.save_tree_graph == other.save_tree_graph)
+
+#################################################################################
     def save_config(self, path, format='json') -> None:
         if format != 'json':
             raise ValueError("Unsupported format. Only 'json' is supported.")
@@ -105,14 +200,24 @@ class MCTSConfig:
         if os.path.exists(path):
             raise FileExistsError("File already exists. Please provide a different path or delete the existing file.")
 
-        config_dict = {
+        config_dict: Dict[str, Any] = {
             'n_classes': self.n_classes,
             'constraint': self.constraint.to_dict(),
+
             'selection_policy': self.selection_policy.to_dict(),
             'exploration_policy': self.exploration_policy.to_dict(),
             'best_child_policy': self.best_child_policy.to_dict(),
+
             'normalize_scores': self.normalize_scores,
-            'normalization_option': self.normalization_option.value if self.normalization_option is not None else None
+            'normalization_option': self.normalization_option.value if self.normalization_option is not None else None,
+
+            'parallel': self.parallel,
+
+            'verbose': self.verbose,
+            'visualize_tree_graph': self.visualize_tree_graph,
+            'save_tree_graph': self.save_tree_graph,
+
+            'loaded_from': self.loaded_from,
         }
 
         with open(path, 'w') as f:
@@ -130,6 +235,8 @@ class MCTSConfig:
 
         for key, value in config_dict.items():
             setattr(self, key, value)
+
+        setattr(self, "loaded_from", path)
 
 
 class MonteCarloConfig(MCTSConfig):

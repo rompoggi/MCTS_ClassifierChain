@@ -15,6 +15,7 @@ from typing import Any, Dict, Tuple, List
 
 from .constraints import Constraint
 from .mcts_node import MCTSNode, visualize_tree
+from .mcts_config import MCTSConfig
 from .utils import randmax
 from .policy import Policy, Uniform, Greedy, EpsGreedy
 
@@ -169,6 +170,48 @@ def _best_child(node: MCTSNode, policy: Policy = Greedy()) -> int:  # pragma: no
     """
     res: int | None = node[policy(node)].label
     return res if (res is not None) else -1
+
+
+def __MCTS(model, x, config: MCTSConfig) -> List[int]:  # pragma: no cover
+    """
+    Monte Carlo Tree Search alogrithm.
+
+    Args:
+        model (Any): The model to use for the MCTS algorithm
+        x (Any): The input data
+        verbose (bool): If True, the constraints will print a message when they are reached
+        secs (float): The time constraint in seconds
+        visualize (bool): If True, the search tree will be visualized
+
+    Returns:
+        list[int]: The labels of the best child of the root node following a greedy policy
+    """
+    n_classes: int = config.n_classes
+    ComputationalConstraint: Constraint = config.constraint
+
+    select_policy: Policy = config.selection_policy
+    simulate_policy: Policy = config.exploration_policy
+    best_child_policy: Policy = config.best_child_policy
+
+    ys: List[int] = []
+    for k in range(n_classes):
+        root: MCTSNode = MCTSNode(label=None, n_children=2, rank=n_classes-k, score=1.)
+        cache: Dict[Tuple[int, ...], float] = {}  # Create a cache to store the reward evaluation to gain inference speed
+
+        ComputationalConstraint.reset()
+        while (ComputationalConstraint):
+            node: MCTSNode = select(root, policy=select_policy)
+            node = simulate(node, policy=simulate_policy)
+            reward: float = _get_reward(node, model, x, cache, ys=ys)
+            back_prog(node, reward)
+
+        bc: int = _best_child(root, policy=best_child_policy)
+        ys.append(bc)
+
+        if config.visualize_tree_graph:
+            visualize_tree(root, best_child=[bc], name=f"binary_tree_{k}", save=config.save_tree_graph)
+
+    return ys
 
 
 def _MCTS(model, x, verbose: bool = False, secs: float = 1, visualize: bool = False, save: bool = False) -> List[int]:  # pragma: no cover

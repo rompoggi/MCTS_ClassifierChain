@@ -39,6 +39,38 @@ def test_mcts_config_normalize_scores_with_option(constraint) -> None:
     assert config.normalization_option == NormOption.SOFTMAX
 
 
+def test_mcts_config_str(constraint) -> None:
+    config = MCTSConfig(normalization_option=NormOption.SOFTMAX, n_classes=3, constraint=constraint)
+    expected_str: str = f"MCTSConfig(n_classes={config.n_classes}, constraint={config.constraint}, selection_policy={config.selection_policy}, " \
+                        f"exploration_policy={config.exploration_policy}, best_child_policy={config.best_child_policy}, " \
+                        f"normalize_scores={config.normalize_scores}, normalization_option={config.normalization_option}, " \
+                        f"parallel={config.parallel}, verbose={config.verbose}, visualize_tree_graph={config.visualize_tree_graph}, " \
+                        f"save_tree_graph={config.save_tree_graph})"
+    assert str(config) == expected_str
+
+
+def test_mcts_config_repr(constraint) -> None:
+    config = MCTSConfig(normalization_option=NormOption.SOFTMAX, n_classes=3, constraint=constraint)
+    expected_repr: str = f"MCTSConfig(n_classes={config.n_classes}, constraint={config.constraint}, selection_policy={config.selection_policy}, " \
+                         f"exploration_policy={config.exploration_policy}, best_child_policy={config.best_child_policy}, " \
+                         f"normalize_scores={config.normalize_scores}, normalization_option={config.normalization_option}, " \
+                         f"parallel={config.parallel}, verbose={config.verbose}, visualize_tree_graph={config.visualize_tree_graph}, " \
+                         f"save_tree_graph={config.save_tree_graph})"
+    assert repr(config) == expected_repr
+
+
+def test_mcts_config_eq(constraint) -> None:
+    config1 = MCTSConfig(normalization_option=NormOption.SOFTMAX, n_classes=3, constraint=constraint)
+    config2 = MCTSConfig(normalization_option=NormOption.SOFTMAX, n_classes=3, constraint=constraint)
+    assert config1 == config2
+
+    config3 = MCTSConfig(normalization_option=NormOption.SOFTMAX, n_classes=3, constraint=constraint)
+    config4 = MCTSConfig(normalization_option=NormOption.SOFTMAX, n_classes=4, constraint=constraint)
+    assert config3 != config4
+
+    assert config1 != "config1"
+
+
 def test_mcts_config_save_load(constraint) -> None:
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp:
         temp_file_name = temp.name
@@ -56,12 +88,21 @@ def test_mcts_config_save_load(constraint) -> None:
 
     assert loaded_config.n_classes == config.n_classes
     assert loaded_config.constraint == config.constraint
+
     assert loaded_config.selection_policy == config.selection_policy
     assert loaded_config.exploration_policy == config.exploration_policy
     assert loaded_config.best_child_policy == config.best_child_policy
+
     assert loaded_config.normalize_scores == config.normalize_scores
     assert loaded_config.normalization_option == config.normalization_option
 
+    assert loaded_config.parallel == config.parallel
+
+    assert loaded_config.verbose == config.verbose
+    assert loaded_config.visualize_tree_graph == config.visualize_tree_graph
+    assert loaded_config.save_tree_graph == config.save_tree_graph
+
+    assert loaded_config.loaded_from == temp_file_name
     os.remove(temp_file_name)
 
 
@@ -92,10 +133,21 @@ def test_monte_carlo_config_save_load(constraint) -> None:
 
     assert loaded_config.n_classes == config.n_classes
     assert loaded_config.constraint == config.constraint
+
     assert loaded_config.selection_policy == config.selection_policy
     assert loaded_config.exploration_policy == config.exploration_policy
     assert loaded_config.best_child_policy == config.best_child_policy
+
     assert loaded_config.normalize_scores == config.normalize_scores
+    assert loaded_config.normalization_option == config.normalization_option
+
+    assert loaded_config.parallel == config.parallel
+
+    assert loaded_config.verbose == config.verbose
+    assert loaded_config.visualize_tree_graph == config.visualize_tree_graph
+    assert loaded_config.save_tree_graph == config.save_tree_graph
+
+    assert loaded_config.loaded_from == temp_file_name
 
     os.remove(temp_file_name)
 
