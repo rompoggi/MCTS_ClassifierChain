@@ -1,6 +1,5 @@
 import io
 import os
-from typing import List
 
 import setuptools
 
@@ -14,13 +13,6 @@ def get_path(*filepath) -> str:
 def read_readme() -> str:
     """Read the README file."""
     return io.open(get_path("README.md"), "r", encoding="utf-8").read()
-
-
-def get_requirements() -> List[str]:
-    """Get Python package dependencies from requirements.txt."""
-    with open(get_path("requirements.txt")) as f:
-        requirements: list[str] = f.read().strip().split("\n")
-    return requirements
 
 
 if __name__ == "__main__":
@@ -40,7 +32,5 @@ if __name__ == "__main__":
             "Topic :: Scientific/Engineering :: Bachelor Thesis",
             "License :: OSI Approved :: MIT License",
         ],
-        install_requires=get_requirements(),
         python_requires=">=3.11",
-        install_requires=get_requirements(),
     )
