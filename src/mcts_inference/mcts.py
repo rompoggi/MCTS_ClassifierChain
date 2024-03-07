@@ -95,7 +95,6 @@ def get_reward(node: MCTSNode, model: Any, x: Any, cache: Dict[Tuple[int, ...], 
     assert all(hasattr(est, 'predict_proba') for est in model.estimators_), "Model must have a predict_proba method"
 
     labels: List[int] = ys + node.get_parent_labels()
-    print(labels)
     if (tuple(labels)) in cache:
         return cache[tuple(labels)]
 
