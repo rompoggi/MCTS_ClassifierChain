@@ -52,13 +52,22 @@ git clone https://github.com/rompoggi/MCTS_ClassifierChain.git
 cd MCTS_ClassifierChain
 ```
 
-3. Install the required dependencies:
+3. Install the dependencies:
+
+The `requirements.txt` file contains a list of Python packages that the project depends on. 
+It might be worthwile to create a new environment to work with the package. The package can then be pip installed locally using the following command:
+
+```bash
+pip install -e .
+```
+
+Otherwise, one can simply install the required dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-The `requirements.txt` file contains a list of Python packages that the project depends on. You may need to use `pip3` instead of `pip` depending on your Python installation.
+You may need to use `pip3` instead of `pip` depending on your Python installation.
 
 
 ## Testing
