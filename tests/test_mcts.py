@@ -57,12 +57,12 @@ def test_back_prog_non_root_node(initial_score, reward) -> None:
     root.expand()
     with pytest.raises(AssertionError):
         back_prog(root[0], 1.0)
-    root[0].visit_count += 1
+    root[0].visit_count = 2  # node visited once for the initial score we give it, and once more of the back_prog
     root[0].score = initial_score
     root.visit_count += 1
     back_prog(root[0], reward)
     assert (root.score == 0.)
-    assert (root[0].score == initial_score + reward)
+    assert (root[0].score == (initial_score + reward)/2)
 
 
 ins_back_prog_recursive: List[Tuple[List[int], float]] = [([0, 0, 1], 42.), ([0, 1, 0, 1, 0, 0], 42.)]
@@ -159,16 +159,16 @@ def test_get_reward_terminal_node(root) -> None:
     x: np.ndarray[Any, np.dtype[int]] = np.array([1, 2, 3])
     cache: Dict[Tuple[int, ...], float] = {}
     node: MCTSNode = root[0][0]
-    reward: float = get_reward(node, model1, x, cache)
+    reward: float = get_reward(node, x, model1, cache)
     assert (reward == val1 ** root.rank), "get_reward should return the correct reward for a terminal node"
     assert (cache == {(0, 0): val1 ** root.rank}), "get_reward should update the cache correctly"
 
     model2 = DummyModel(n_label=root.rank, val=val2)
-    reward = get_reward(node, model2, x, cache)
+    reward = get_reward(node, x, model2, cache)
     assert (reward == val1 ** root.rank)  # same reward because of cache.
 
     node = root[0][1]
-    reward = get_reward(node, model2, x, cache)
+    reward = get_reward(node, x, model2, cache)
     assert (reward == val2 ** root.rank), "get_reward should return the correct reward for a terminal node"
     assert (cache == {(0, 0): val1 ** root.rank, (0, 1): val2 ** root.rank})
 
@@ -176,7 +176,7 @@ def test_get_reward_terminal_node(root) -> None:
     node.parent_labels = []
     node[0].parent_labels = [1]
     node.parent = None
-    reward = get_reward(node[0], model2, x, cache, ys=[1])
+    reward = get_reward(node[0], x=x, model=model2, cache=cache, ys=[1])
     assert (reward == val2 ** root.rank)
 
 
@@ -184,7 +184,7 @@ def test_has_predict_proba(root) -> None:
     model = DummyModel(2, 0.5, 2)
     model.estimators_[0] = None
     with pytest.raises(AssertionError):
-        get_reward(root[0][0], model, np.array([1, 2, 3]), {})
+        get_reward(node=root[0][0], x=np.array([1, 2, 3]), model=model, cache={})
 
 
 ######################################################################

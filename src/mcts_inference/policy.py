@@ -221,7 +221,9 @@ class UCB(Policy):
             return randmax(-counts)
 
         scores: np.ndarray[Any, np.dtype[np.float64]] = node.get_children_scores()
-        ucb: np.ndarray[Any, np.dtype[np.float64]] = scores / counts + np.sqrt(self.alpha * np.log(node.visit_count) / counts)
+        # ucb: np.ndarray[Any, np.dtype[np.float64]] = scores / counts + np.sqrt(self.alpha * np.log(node.visit_count) / counts)
+        ucb: np.ndarray[Any, np.dtype[np.float64]] = scores + np.sqrt(self.alpha * np.log(node.visit_count) / counts)
+
         return randmax(ucb)
 
     def name(self) -> str:

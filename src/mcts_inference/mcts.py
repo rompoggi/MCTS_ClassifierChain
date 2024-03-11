@@ -53,7 +53,8 @@ def back_prog(node: MCTSNode, reward: float) -> None:
     if node.parent is None:  # root node, no need to update
         return
     assert (node.visit_count > 0), "Node has not yet been visited. A problem appened."
-    node.score += reward
+    # node.score += reward
+    node.score = ((node.visit_count-1) * node.score + reward) / (node.visit_count)
     back_prog(node.parent, reward)
 
 
@@ -81,15 +82,15 @@ def simulate(node: MCTSNode, policy: Policy = Uniform()) -> MCTSNode:
     return node
 
 
-def get_reward(node: MCTSNode, model: Any, x: Any, cache: Dict[Tuple[int, ...], float] = {}, ys: List[int] = []) -> float:
+def get_reward(node: MCTSNode, x: Any, model: Any, cache: Dict[Tuple[int, ...], float] = {}, ys: List[int] = []) -> float:
     """
     Get the reward for the given node.
     The reward is obtained from the model that does the inference.
 
     Args:
         node (MCTSNode): The node for which to get the reward
-        model (Any): The model to use for the reward evaluation, which has the predict_proba method
         x (Any): The input data
+        model (Any): The model to use for the reward evaluation, which has the predict_proba method
         cache (Dict[list[int], float]): The cache to store the reward evaluation
     """
     assert all(hasattr(est, 'predict_proba') for est in model.estimators_), "Model must have a predict_proba method"
@@ -139,13 +140,13 @@ def best_child_all(root: MCTSNode, policy: Policy = Greedy()) -> list[int]:
     return node.get_parent_labels()
 
 
-def _one_step_MCTS(model, x, config) -> list[int]:  # pragma: no cover
+def _one_step_MCTS(x, model, config) -> list[int]:  # pragma: no cover
     """
     Perform the Monte Carlo Tree Search (MCTS) algorithm step by step.
 
     Args:
-        model: The machine learning model used for inference.
         x: The input data for inference.
+        model: The machine learning model used for inference.
         config: The configuration object containing various MCTS parameters.
 
     Returns:
@@ -168,7 +169,7 @@ def _one_step_MCTS(model, x, config) -> list[int]:  # pragma: no cover
         while (ComputationalConstraint):
             node: MCTSNode = select(root, policy=select_policy)
             node = simulate(node, policy=simulate_policy)
-            reward: float = get_reward(node, model, x, cache, ys=ys)
+            reward: float = get_reward(node, x, model, cache, ys=ys)
             back_prog(node, reward)
 
         bc: int = best_child(root, policy=best_child_policy)
@@ -180,7 +181,7 @@ def _one_step_MCTS(model, x, config) -> list[int]:  # pragma: no cover
     return ys
 
 
-def _all_step_MCTS(model, x, config) -> list[int]:  # pragma: no cover
+def _all_step_MCTS(x, model, config) -> list[int]:  # pragma: no cover
     n_classes: int = config.n_classes
     ComputationalConstraint: Constraint = config.constraint
 
@@ -195,7 +196,7 @@ def _all_step_MCTS(model, x, config) -> list[int]:  # pragma: no cover
     while (ComputationalConstraint):
         node: MCTSNode = select(root, policy=select_policy)
         node = simulate(node, policy=simulate_policy)
-        reward: float = get_reward(node, model, x, cache)
+        reward: float = get_reward(node, x, model, cache)
         back_prog(node, reward)
 
     bc: List[int] = best_child_all(root, policy=best_child_policy)
@@ -214,7 +215,7 @@ def _one_step_MCTS_wrapper(args) -> list[int]:
     return _one_step_MCTS(*args)
 
 
-def MCTS(model, X, config: MCTSConfig) -> Any:  # pragma: no cover
+def MCTS(x, model, config: MCTSConfig) -> Any:  # pragma: no cover
     """
     Monte Carlo Tree Search alogrithm.
 
@@ -228,7 +229,7 @@ def MCTS(model, X, config: MCTSConfig) -> Any:  # pragma: no cover
     Returns:
         list[int]: The labels of the best child of the root node following a greedy policy
     """
-    X = np.atleast_2d(X)
+    X = np.atleast_2d(x)
 
     if config.parallel:
         if config.step_once:
@@ -238,9 +239,9 @@ def MCTS(model, X, config: MCTSConfig) -> Any:  # pragma: no cover
 
         with mp.Pool(mp.cpu_count()) as pool:
             if config.verbose:
-                out = list(tqdm(pool.imap(MCTS_wrapper, [(model, x, config) for x in X]), total=len(X)))
+                out = list(tqdm(pool.imap(MCTS_wrapper, [(x, model, config) for x in X]), total=len(X)))
             else:
-                out = pool.map(MCTS_wrapper, [(model, x, config) for x in X])
+                out = pool.map(MCTS_wrapper, [(x, model, config) for x in X])
 
     else:
         if config.step_once:
@@ -249,9 +250,9 @@ def MCTS(model, X, config: MCTSConfig) -> Any:  # pragma: no cover
             func = _all_step_MCTS
 
         if config.verbose:
-            out = [func(model, x, config) for x in tqdm(X, total=len(X))]
+            out = [func(x, model, config) for x in tqdm(X, total=len(X))]
         else:
-            out = [func(model, x, config) for x in X]
+            out = [func(x, model, config) for x in X]
 
     return np.atleast_2d(out)
 

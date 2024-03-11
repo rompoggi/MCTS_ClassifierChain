@@ -78,6 +78,9 @@ class MCTSConfig:
     def constraint(self, value) -> None:
         self._constraint = Constraint(**value)
 
+    def replace_constraint(self, constraint: Constraint) -> None:
+        self._constraint = constraint
+
 #######
     @property
     def selection_policy(self) -> Policy:
