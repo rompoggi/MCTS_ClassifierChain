@@ -1,9 +1,9 @@
 from mcts_inference.constraints import Constraint
 from mcts_inference.mcts import MCTS
 from mcts_inference.mcts_config import MCTSConfig
-# import numpy as np
 
-if __name__ == "__main__":  # pragma: no cover
+
+def main():
     from sklearn.datasets import make_multilabel_classification
     from sklearn.model_selection import train_test_split
     n_samples = 10000
@@ -22,24 +22,24 @@ if __name__ == "__main__":  # pragma: no cover
     test_size = 0.2
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=test_size, random_state=random_state)
 
-    from sklearn.multioutput import ClassifierChain
-    from sklearn.linear_model import LogisticRegression
+    from sklearn.multioutput import ClassifierChain  # type: ignore
+    from sklearn.linear_model import LogisticRegression  # type: ignore
 
     solver = "liblinear"
     base = LogisticRegression(solver=solver)
-    chain: ClassifierChain = ClassifierChain(base)
+    chain = ClassifierChain(base)
 
-    chain = chain.fit(X_train, Y_train)
+    chain: ClassifierChain = chain.fit(X_train, Y_train)
 
     # from tqdm import trange
     # from sklearn.metrics import hamming_loss, zero_one_loss
 
-    secs_lis: list[float] = [0.01, 0.1]  # , 0.5, 1., 2.]
+    # secs_lis: list[float] = [0.01, 0.1]  # , 0.5, 1., 2.]
 
     config = MCTSConfig(n_classes=n_classes, constraint=Constraint(time=True, d_time=0.1), step_once=False, parallel=False, verbose=True)
 
     M: int = 100
-    Y = MCTS(chain, X_test[:M], config=config)
+    Y = MCTS(X_test[:M], chain, config=config)
 
     # M: int = min(100, len(Y_test))
 
@@ -97,3 +97,7 @@ if __name__ == "__main__":  # pragma: no cover
     #     plt.ylabel("Zero One Loss")
     #     plt.legend()
     #     plt.show()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
