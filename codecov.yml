@@ -11,3 +11,7 @@ cli:
   plugins:
     pycoverage:
       report_type: "json"
+
+ignore:
+  - /tests/test_mc.py
+  - /tests/test_brute_force.py
