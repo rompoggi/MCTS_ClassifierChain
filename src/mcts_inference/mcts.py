@@ -19,11 +19,12 @@ from tqdm import tqdm
 from .constraints import Constraint
 from .mcts_node import MCTSNode, visualize_tree
 from .mcts_config import MCTSConfig
-from .utils import randmax
+from .utils import randmax, deprecated
 from .policy import Policy, Uniform, Greedy  # , EpsGreedy
 
 
-def select(node: MCTSNode, policy: Policy) -> MCTSNode:
+@deprecated
+def select(node: MCTSNode, select_policy: Policy) -> MCTSNode:
     """
     Select the next node to visit using the MCTS algorithm.
     Selection is made using an epsilon greedy policy.
@@ -34,31 +35,20 @@ def select(node: MCTSNode, policy: Policy) -> MCTSNode:
     """
     while (node.is_expanded() and not node.is_terminal()):
         node.visit_count += 1
-        idx: int = policy(node)
+        idx: int = select_policy(node)
         node = node[idx]
     return node
 
 
-def back_prog(node: MCTSNode, reward: float) -> None:
-    """
-    Propagate the reward back up the tree.
-
-    Args:
-        node (MCTSNode): The node from which to propagate the reward
-        reward (float): The reward to propagate
-
-    Returns:
-        None
-    """
-    if node.parent is None:  # root node, no need to update
-        return
-    assert (node.visit_count > 0), "Node has not yet been visited. A problem appened."
-    # node.score += reward
-    node.score = ((node.visit_count-1) * node.score + reward) / (node.visit_count)
-    back_prog(node.parent, reward)
+def _select(node: MCTSNode, select_policy: Policy) -> MCTSNode:
+    while (node.is_expanded() and not node.is_terminal()):
+        idx: int = select_policy(node)
+        node = node[idx]
+    return node
 
 
-def simulate(node: MCTSNode, policy: Policy = Uniform()) -> MCTSNode:
+@deprecated
+def simulate(node: MCTSNode, simulate_policy: Policy = Uniform()) -> MCTSNode:
     """
     Simulate the rest of the episode from the given node.
     Returns the reward for the episode.
@@ -76,9 +66,18 @@ def simulate(node: MCTSNode, policy: Policy = Uniform()) -> MCTSNode:
     while (not node.is_terminal()):
         if not node.is_expanded():
             node.expand()
-        idx: int = policy(node)
+        idx: int = simulate_policy(node)
         node = node[idx]
         node.visit_count += 1
+    return node
+
+
+def _simulate(node: MCTSNode, simulate_policy: Policy = Uniform()) -> MCTSNode:
+    while (not node.is_terminal()):
+        if (not node.is_expanded()):
+            node.expand()
+        idx: int = simulate_policy(node)
+        node = node[idx]
     return node
 
 
@@ -115,7 +114,36 @@ def get_reward(node: MCTSNode, x: Any, model: Any, cache: Dict[Tuple[int, ...], 
     return p
 
 
-def best_child(node: MCTSNode, policy: Policy = Greedy()) -> int:
+@deprecated
+def back_prog(node: MCTSNode, reward: float) -> None:
+    """
+    Propagate the reward back up the tree.
+
+    Args:
+        node (MCTSNode): The node from which to propagate the reward
+        reward (float): The reward to propagate
+
+    Returns:
+        None
+    """
+    if node.parent is None:  # root node, no need to update
+        return
+    assert (node.visit_count > 0), "Node has not yet been visited. A problem appened."
+    # node.score += reward
+    node.score = ((node.visit_count-1) * node.score + reward) / (node.visit_count)
+    back_prog(node.parent, reward)
+
+
+def _back_prog(node: MCTSNode, reward: float) -> None:
+    if (node.parent is None):
+        node.visit_count += 1
+        return
+    node.score = ((node.visit_count) * node.score + reward) / (node.visit_count + 1)
+    node.visit_count += 1
+    _back_prog(node.parent, reward)
+
+
+def best_child(node: MCTSNode, best_child_policy: Policy = Greedy()) -> int:
     """
     Returns the labels of the best child of the root node following a greedy policy.
 
@@ -123,11 +151,10 @@ def best_child(node: MCTSNode, policy: Policy = Greedy()) -> int:
         node (MCTSNode): The root node from which to select the best child
         policy (Policy): The policy to use to select the best child
     """
-    res: int | None = node[policy(node)].label
-    return res if (res is not None) else -1
+    return best_child_policy(node)
 
 
-def best_child_all(root: MCTSNode, policy: Policy = Greedy()) -> list[int]:
+def best_child_all(root: MCTSNode, best_child_policy: Policy = Greedy()) -> list[int]:
     """
     Returns the labels of the best child of the root node following a greedy policy.
 
@@ -136,11 +163,14 @@ def best_child_all(root: MCTSNode, policy: Policy = Greedy()) -> list[int]:
     """
     node: MCTSNode = root
     while (not node.is_terminal()):
-        node = node[policy(node)]
+        if (not node.is_expanded()):
+            node.expand()
+        node = node[best_child_policy(node)]
     return node.get_parent_labels()
 
 
-def _one_step_MCTS(x, model, config) -> list[int]:  # pragma: no cover
+@deprecated
+def MCTS_one_step_atime(x, model, config) -> list[int]:  # pragma: no cover
     """
     Perform the Monte Carlo Tree Search (MCTS) algorithm step by step.
 
@@ -167,12 +197,12 @@ def _one_step_MCTS(x, model, config) -> list[int]:  # pragma: no cover
 
         ComputationalConstraint.reset()
         while (ComputationalConstraint):
-            node: MCTSNode = select(root, policy=select_policy)
-            node = simulate(node, policy=simulate_policy)
+            node: MCTSNode = select(root, select_policy=select_policy)
+            node = simulate(node, simulate_policy=simulate_policy)
             reward: float = get_reward(node, x, model, cache, ys=ys)
             back_prog(node, reward)
 
-        bc: int = best_child(root, policy=best_child_policy)
+        bc: int = best_child(root, best_child_policy=best_child_policy)
         ys.append(bc)
 
         if config.visualize_tree_graph:
@@ -181,7 +211,49 @@ def _one_step_MCTS(x, model, config) -> list[int]:  # pragma: no cover
     return ys
 
 
-def _all_step_MCTS(x, model, config) -> list[int]:  # pragma: no cover
+def _MCTS_one_step_atime(x, model, config) -> list[int]:  # pragma: no cover
+    """
+    Perform the Monte Carlo Tree Search (MCTS) algorithm step by step.
+
+    Args:
+        x: The input data for inference.
+        model: The machine learning model used for inference.
+        config: The configuration object containing various MCTS parameters.
+
+    Returns:
+        List[int]: The predicted labels for the input data.
+
+    """
+    n_classes: int = config.n_classes
+    ComputationalConstraint: Constraint = config.constraint
+
+    select_policy: Policy = config.selection_policy
+    simulate_policy: Policy = config.exploration_policy
+    best_child_policy: Policy = config.best_child_policy
+
+    ys: List[int] = []
+    for k in range(n_classes):
+        root: MCTSNode = MCTSNode(label=None, n_children=2, rank=n_classes-k, score=1.)
+        cache: Dict[Tuple[int, ...], float] = {}  # Create a cache to store the reward evaluation to gain inference speed
+
+        ComputationalConstraint.reset()
+        while (ComputationalConstraint):
+            node: MCTSNode = _select(root, select_policy=select_policy)
+            leaf = _simulate(node, simulate_policy=simulate_policy)
+            reward: float = get_reward(leaf, x, model, cache, ys=ys)
+            _back_prog(node, reward)
+
+        bc: int = best_child(root, best_child_policy=best_child_policy)
+        ys.append(bc)
+
+        if config.visualize_tree_graph:
+            visualize_tree(root, best_child=[bc], name=f"binary_tree_{k}", save=config.save_tree_graph)
+
+    return ys
+
+
+@deprecated
+def MCTS_all_step_atime(x, model, config) -> list[int]:  # pragma: no cover
     n_classes: int = config.n_classes
     ComputationalConstraint: Constraint = config.constraint
 
@@ -194,12 +266,12 @@ def _all_step_MCTS(x, model, config) -> list[int]:  # pragma: no cover
 
     ComputationalConstraint.reset()
     while (ComputationalConstraint):
-        node: MCTSNode = select(root, policy=select_policy)
-        node = simulate(node, policy=simulate_policy)
+        node: MCTSNode = select(root, select_policy=select_policy)
+        node = simulate(node, simulate_policy=simulate_policy)
         reward: float = get_reward(node, x, model, cache)
         back_prog(node, reward)
 
-    bc: List[int] = best_child_all(root, policy=best_child_policy)
+    bc: List[int] = best_child_all(root, best_child_policy=best_child_policy)
 
     if config.visualize_tree_graph:
         visualize_tree(root, best_child=bc, name="binary_tree", save=config.save_tree_graph)
@@ -207,14 +279,50 @@ def _all_step_MCTS(x, model, config) -> list[int]:  # pragma: no cover
     return bc
 
 
-def _all_step_MCTS_wrapper(args) -> list[int]:
-    return _all_step_MCTS(*args)
+def _MCTS_all_step_atime(x, model, config) -> list[int]:  # pragma: no cover
+    n_classes: int = config.n_classes
+    ComputationalConstraint: Constraint = config.constraint
+
+    select_policy: Policy = config.selection_policy
+    simulate_policy: Policy = config.exploration_policy
+    best_child_policy: Policy = config.best_child_policy
+
+    root: MCTSNode = MCTSNode(label=None, n_children=2, rank=n_classes, score=1.)
+    cache: Dict[Tuple[int, ...], float] = {}  # Create a cache to store the reward evaluation to gain inference speed
+
+    ComputationalConstraint.reset()
+    while (ComputationalConstraint):
+        node: MCTSNode = _select(root, select_policy=select_policy)
+        leaf = _simulate(node, simulate_policy=simulate_policy)
+        reward: float = get_reward(leaf, x, model, cache)
+        _back_prog(node, reward)
+
+    bc: List[int] = best_child_all(root, best_child_policy=best_child_policy)
+
+    if config.visualize_tree_graph:
+        visualize_tree(root, best_child=bc, name="binary_tree", save=config.save_tree_graph)
+
+    return bc
 
 
-def _one_step_MCTS_wrapper(args) -> list[int]:
-    return _one_step_MCTS(*args)
+@deprecated
+def MCTS_all_step_atime_wrapper(args) -> list[int]:
+    return MCTS_all_step_atime(*args)
 
 
+def _MCTS_all_step_atime_wrapper(args) -> list[int]:
+    return _MCTS_all_step_atime(*args)
+
+@deprecated
+def MCTS_one_step_atime_wrapper(args) -> list[int]:
+    return MCTS_one_step_atime(*args)
+
+
+def _MCTS_one_step_atime_wrapper(args) -> list[int]:
+    return _MCTS_one_step_atime(*args)
+
+
+@deprecated
 def MCTS(x, model, config: MCTSConfig) -> Any:  # pragma: no cover
     """
     Monte Carlo Tree Search alogrithm.
@@ -233,9 +341,9 @@ def MCTS(x, model, config: MCTSConfig) -> Any:  # pragma: no cover
 
     if config.parallel:
         if config.step_once:
-            MCTS_wrapper = _one_step_MCTS_wrapper
+            MCTS_wrapper = MCTS_one_step_atime_wrapper
         else:
-            MCTS_wrapper = _all_step_MCTS_wrapper
+            MCTS_wrapper = MCTS_all_step_atime_wrapper
 
         with mp.Pool(mp.cpu_count()) as pool:
             if config.verbose:
@@ -245,9 +353,9 @@ def MCTS(x, model, config: MCTSConfig) -> Any:  # pragma: no cover
 
     else:
         if config.step_once:
-            func = _one_step_MCTS
+            func = MCTS_one_step_atime
         else:
-            func = _all_step_MCTS
+            func = MCTS_all_step_atime
 
         if config.verbose:
             out = [func(x, model, config) for x in tqdm(X, total=len(X))]
@@ -257,8 +365,51 @@ def MCTS(x, model, config: MCTSConfig) -> Any:  # pragma: no cover
     return np.atleast_2d(out)
 
 
-__all__: list[str] = ["MCTS", "randmax", "select", "back_prog",
+def _MCTS(x, model, config: MCTSConfig) -> Any:  # pragma: no cover
+    """
+    Monte Carlo Tree Search alogrithm.
+
+    Args:
+        model (Any): The model to use for the MCTS algorithm
+        x (Any): The input data
+        verbose (bool): If True, the constraints will print a message when they are reached
+        secs (float): The time constraint in seconds
+        visualize (bool): If True, the search tree will be visualized
+
+    Returns:
+        list[int]: The labels of the best child of the root node following a greedy policy
+    """
+    X = np.atleast_2d(x)
+
+    if config.parallel:
+        if config.step_once:
+            MCTS_wrapper = _MCTS_one_step_atime_wrapper
+        else:
+            MCTS_wrapper = _MCTS_all_step_atime_wrapper
+
+        with mp.Pool(mp.cpu_count()) as pool:
+            if config.verbose:
+                out = list(tqdm(pool.imap(MCTS_wrapper, [(x, model, config) for x in X]), total=len(X)))
+            else:
+                out = pool.map(MCTS_wrapper, [(x, model, config) for x in X])
+
+    else:
+        if config.step_once:
+            func = _MCTS_one_step_atime
+        else:
+            func = _MCTS_all_step_atime
+
+        if config.verbose:
+            out = [func(x, model, config) for x in tqdm(X, total=len(X))]
+        else:
+            out = [func(x, model, config) for x in X]
+
+    return np.atleast_2d(out)
+
+
+
+__all__: list[str] = ["_MCTS", "randmax", "select", "back_prog",
                       "simulate", "get_reward", "best_child", "best_child_all",
-                      "_all_step_MCTS", "_all_step_MCTS_wrapper",
-                      "_one_step_MCTS", "_one_step_MCTS_wrapper"
+                      "MCTS_all_step_atime", "MCTS_all_step_atime_wrapper",
+                      "MCTS_one_step_atime", "MCTS_one_step_atime_wrapper"
                       ]

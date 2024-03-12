@@ -3,7 +3,7 @@ Test file for the utils module.
 """
 
 import pytest
-from mcts_inference.utils import randmax, NormOption, debug
+from mcts_inference.utils import randmax, NormOption, debug, deprecated
 from typing import Any
 
 
@@ -57,3 +57,19 @@ def test_debug(capfd) -> None:
     assert g(0, 1) == 0
     captured = capfd.readouterr()
     assert captured.out == "'g': args=(0, 1), kwargs={}\n'g': output=0\n"
+
+# Deprecated function tests
+def test_deprecated(caplog) -> None:
+    @deprecated
+    def deprecated_func(x: int, y: int) -> int:
+        return x + y
+
+    assert deprecated_func(1, 2) == 3
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'WARNING'
+    assert "Call to deprecated function deprecated_func." in caplog.records[0].message
+
+    assert deprecated_func(3, 4) == 7
+    assert len(caplog.records) == 2
+    assert caplog.records[1].levelname == 'WARNING'
+    assert "Call to deprecated function deprecated_func." in caplog.records[1].message

@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from typing import List, Tuple, Dict, Any
 
-from mcts_inference.mcts import select, back_prog, simulate, get_reward, best_child, best_child_all, _all_step_MCTS_wrapper, _one_step_MCTS_wrapper
+from mcts_inference.mcts import select, back_prog, simulate, get_reward, best_child, best_child_all, MCTS_all_step_atime, MCTS_one_step_atime
 from mcts_inference.mcts_node import MCTSNode
 from mcts_inference.policy import Policy, Uniform, Greedy
 
@@ -225,32 +225,32 @@ def test_best_child_no_children() -> None:
 
 
 ######################################################################
-#                     _all_step_MCTS_wrapper                         #
+#                     MCTS_all_step_atime                         #
 ######################################################################
-def test_all_step_MCTS_wrapper() -> None:
+def testMCTS_all_step_atime() -> None:
     # Mock the _all_step_MCTS function
     with mock.patch('mcts_inference.mcts._all_step_MCTS', return_value=[1, 2, 3]) as mock_all_step_MCTS:
-        result = _all_step_MCTS_wrapper((1, 'a', True))
+        result = MCTS_all_step_atime((1, 'a', True))
         mock_all_step_MCTS.assert_called_once_with(1, 'a', True)
-        assert result == [1, 2, 3], "_all_step_MCTS_wrapper should return the same result as _all_step_MCTS"
+        assert result == [1, 2, 3], "MCTS_all_step_atime should return the same result as _all_step_MCTS"
 
     with mock.patch('mcts_inference.mcts._all_step_MCTS', return_value=[4, 5, 6]) as mock_all_step_MCTS:
-        result = _all_step_MCTS_wrapper(('test', 2.5, False))
+        result = MCTS_all_step_atime(('test', 2.5, False))
         mock_all_step_MCTS.assert_called_once_with('test', 2.5, False)
-        assert result == [4, 5, 6], "_all_step_MCTS_wrapper should return the same result as _all_step_MCTS"
+        assert result == [4, 5, 6], "MCTS_all_step_atime should return the same result as _all_step_MCTS"
 
 
 ######################################################################
-#                     _one_step_MCTS_wrapper                         #
+#                     MCTS_one_step_atime                         #
 ######################################################################
-def test_one_step_MCTS_wrapper() -> None:
+def testMCTS_one_step_atime() -> None:
     # Mock the _one_step_MCTS function
     with mock.patch('mcts_inference.mcts._one_step_MCTS', return_value=[1, 2, 3]) as mock_one_step_MCTS:
-        result = _one_step_MCTS_wrapper((1, 'a', True))
+        result = MCTS_one_step_atime((1, 'a', True))
         mock_one_step_MCTS.assert_called_once_with(1, 'a', True)
-        assert result == [1, 2, 3], "_one_step_MCTS_wrapper should return the same result as _one_step_MCTS"
+        assert result == [1, 2, 3], "MCTS_one_step_atime should return the same result as _one_step_MCTS"
 
     with mock.patch('mcts_inference.mcts._one_step_MCTS', return_value=[4, 5, 6]) as mock_one_step_MCTS:
-        result = _one_step_MCTS_wrapper(('test', 2.5, False))
+        result = MCTS_one_step_atime(('test', 2.5, False))
         mock_one_step_MCTS.assert_called_once_with('test', 2.5, False)
-        assert result == [4, 5, 6], "_one_step_MCTS_wrapper should return the same result as _one_step_MCTS"
+        assert result == [4, 5, 6], "MCTS_one_step_atime should return the same result as _one_step_MCTS"

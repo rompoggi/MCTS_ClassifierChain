@@ -214,7 +214,7 @@ class UCB(Policy):
             >>> ucb(node)
             1
         """
-        assert (node.visit_count > 0), "Node has not yet been visited. A problem appened."
+        # assert (node.visit_count > 0), "Node has not yet been visited. A problem appened."
 
         counts: np.ndarray[Any, np.dtype[np.int64]] = node.get_children_counts()
         if min(counts) == 0:
