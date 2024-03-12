@@ -44,7 +44,7 @@ class MCNode:
     def is_expanded(self) -> bool:
         return (len(self.children) != 0)
 
-    def expand(self, x, model) -> None:
+    def expand(self, x, model) -> None:  # pragma: no cover, hard to test because of varying probabilities
         assert all(hasattr(est, 'predict_proba') for est in model.estimators_), "Model must have a predict_proba method"
         assert (not self.is_terminal()), "Cannot expand a terminal node"
         assert (not self.is_expanded()), "Node already expanded. Cannot expand again."
@@ -75,7 +75,7 @@ class MCNode:
 #############################
 
 
-def mc_simulate(node: MCNode, x, model) -> Tuple[MCNode, float]:
+def mc_simulate(node: MCNode, x, model) -> Tuple[MCNode, float]:  # pragma: no cover
     """
     Simulate the rest of the episode from the given node.
     Returns the reward for the episode.

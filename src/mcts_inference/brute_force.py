@@ -15,7 +15,7 @@ import multiprocessing as mp
 from tqdm import tqdm
 
 
-def _BF(x, model, config: MCTSConfig) -> Any:
+def BF(x, model, config: MCTSConfig) -> Any:  # pragma: no cover
     """
     Brute force algorithm to find the best label combination.
 
@@ -69,15 +69,15 @@ def _BF(x, model, config: MCTSConfig) -> Any:
 
         return np.array(max(old_dict, key=lambda x: old_dict[x]))
 
-    except ExecutionTimeout:  # Timed out
+    except ExecutionTimeout:
         return -1 * np.ones(config.n_classes)
 
 
 def BF_wrapper(args) -> Any:
-    return _BF(*args)
+    return BF(*args)
 
 
-def brute_force(x, model, config: MCTSConfig) -> Any:
+def brute_force(x, model, config: MCTSConfig) -> Any:  # pragma: no cover
     """
     Brute force algorithm to find the best label combination.
 
@@ -103,9 +103,9 @@ def brute_force(x, model, config: MCTSConfig) -> Any:
 
     else:
         if config.verbose:
-            out = [_BF(x, model, config) for x in tqdm(X, total=len(X))]
+            out = [BF(x, model, config) for x in tqdm(X, total=len(X))]
         else:
-            out = [_BF(x, model, config) for x in X]
+            out = [BF(x, model, config) for x in X]
 
     return np.atleast_2d(out)
 

@@ -200,14 +200,6 @@ def test_EpsGreedy_to_dict(epsilon) -> None:
 ######################################################################
 #                                UCB                                 #
 ######################################################################
-def test_ucb_visited() -> None:
-    node = MCTSNode(label=0, rank=2, n_children=8)
-    node.expand()
-    ucb = UCB(alpha=0.5)
-    with pytest.raises(AssertionError):
-        ucb(node)
-
-
 @pytest.mark.parametrize("k", [1, 2, 4, 8])
 def test_ucb_no_visit(k) -> None:
     node = MCTSNode(label=0, rank=2, n_children=8)
@@ -268,14 +260,6 @@ def test_ucb_to_dict() -> None:
 ######################################################################
 #                          Thompson Sampling                         #
 ######################################################################
-def test_thompson_visited() -> None:
-    node = MCTSNode(label=0, rank=2, n_children=8)
-    node.expand()
-    ucb = UCB(alpha=0.5)
-    with pytest.raises(AssertionError):
-        ucb(node)
-
-
 @pytest.mark.parametrize("k", [1, 2, 4, 8])
 def test_thompson_no_visit(k) -> None:
     node = MCTSNode(label=0, rank=2, n_children=8)

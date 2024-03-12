@@ -206,3 +206,40 @@ def test_load_config_invalid_format(constraint) -> None:
 
     with pytest.raises(FileNotFoundError):
         config = MCTSConfig(path=temp_file_name)
+
+
+def test_replace_constraint(constraint) -> None:
+    # Create a MCTSConfig instance with a certain constraint
+    config = MCTSConfig(normalization_option=NormOption.SOFTMAX, n_classes=3, constraint=constraint)
+
+    # Assert that the initial constraint is as expected
+    assert config.constraint == constraint
+
+    # Create a new constraint and replace the old one
+    new_constraint = Constraint(time=True, d_time=2.0)
+    config.replace_constraint(new_constraint)
+
+    # Assert that the constraint has been replaced
+    assert (config.constraint == new_constraint)
+
+
+def test_replace_constraint_with_same_constraint(constraint) -> None:
+    # Create a MCTSConfig instance with a certain constraint
+    config = MCTSConfig(normalization_option=NormOption.SOFTMAX, n_classes=3, constraint=constraint)
+
+    # Replace the constraint with the same constraint
+    config.replace_constraint(constraint)
+
+    # Assert that the constraint is still the same
+    assert config.constraint == constraint
+
+
+def test_replace_constraint_with_none(constraint) -> None:
+    # Create a MCTSConfig instance with a certain constraint
+    config = MCTSConfig(normalization_option=NormOption.SOFTMAX, n_classes=3, constraint=constraint)
+
+    # Replace the constraint with None
+    config.replace_constraint(None)
+
+    # Assert that the constraint is now None
+    assert (config.constraint is None)

@@ -1,5 +1,5 @@
 from mcts_inference.constraints import Constraint
-from mcts_inference.mcts import _MCTS
+from mcts_inference.mcts import MCTS
 from mcts_inference.mcts_config import MCTSConfig
 from mcts_inference.policy import UCB
 from mcts_inference.mc import MC
@@ -40,13 +40,13 @@ def main():
     Yc = chain.predict(X_test[:M])
 
     config = MCTSConfig(n_classes=n_classes, selection_policy=UCB(2), constraint=Constraint(max_iter=True, n_iter=n_iter), verbose=True)
-    Ymcts = _MCTS(X_test[:M], chain, config=config)
+    Ymcts = MCTS(X_test[:M], chain, config=config)
 
     config = MCTSConfig(n_classes=n_classes, selection_policy=UCB(2), constraint=Constraint(max_iter=True, n_iter=n_iter), verbose=True)
     Ymc = MC(X_test[:M], chain, config=config)
 
     config = MCTSConfig(n_classes=n_classes, selection_policy=UCB(2) ,constraint=Constraint(max_iter=True, n_iter=n_iter), step_once=False, verbose=True)
-    Ym1cts = _MCTS(X_test[:M], chain, config=config)
+    Ym1cts = MCTS(X_test[:M], chain, config=config)
 
     config = MCTSConfig(n_classes=n_classes, selection_policy=UCB(2) ,constraint=Constraint(time=True, d_time=3.), verbose=True)
     Ybf = BF(X_test[:M], chain, config=config)
@@ -69,4 +69,3 @@ def main():
 
 if __name__ == "__main__":  # pragma: no cover
     main()
-

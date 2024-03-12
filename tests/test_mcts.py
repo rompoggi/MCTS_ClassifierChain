@@ -7,7 +7,10 @@ import numpy as np
 import pytest
 from typing import List, Tuple, Dict, Any
 
-from mcts_inference.mcts import select, back_prog, simulate, get_reward, best_child, best_child_all, MCTS_all_step_atime, MCTS_one_step_atime
+from mcts_inference.mcts import select, simulate, get_reward, back_prog
+from mcts_inference.mcts import best_child, best_child_all
+from mcts_inference.mcts import MCTS_all_step_atime_wrapper, MCTS_one_step_atime_wrapper  # , _MCTS
+
 from mcts_inference.mcts_node import MCTSNode
 from mcts_inference.policy import Policy, Uniform, Greedy
 
@@ -29,17 +32,20 @@ def test_select_expanded() -> None:
 
     result = select(node, policy)
     assert (node != result)
-    assert (node.visit_count == v_count + 1)
+    assert (node.visit_count == v_count)
     assert (node[0] == result or node[1] == result)
 
 
 def test_select_terminal() -> None:
     policy: Policy = Greedy()
 
-    node: MCTSNode = MCTSNode(label=0, n_children=2, rank=0)
+    node: MCTSNode = MCTSNode(label=0, n_children=2, rank=1)
+
+    assert (not node.is_terminal())
+    node.expand()
 
     result: MCTSNode = select(node, policy)
-    assert (node == result)
+    assert ((result == node[0]) or (result == node[1]))
 
 
 ######################################################################
@@ -49,20 +55,23 @@ def test_back_prog_root_node() -> None:
     root: MCTSNode = MCTSNode(label=0, n_children=2, rank=1, score=0.)
     back_prog(root, 1.0)
     assert (root.score == 0.), "back_prog should not update the score of the root node"
+    assert (root.visit_count == 1), "back_prog should update the visit count of the root node"
 
 
 @pytest.mark.parametrize("initial_score, reward", [(0., 1.), (1., 42.)])
 def test_back_prog_non_root_node(initial_score, reward) -> None:
     root: MCTSNode = MCTSNode(label=None, n_children=2, rank=1, score=0.)
     root.expand()
-    with pytest.raises(AssertionError):
-        back_prog(root[0], 1.0)
-    root[0].visit_count = 2  # node visited once for the initial score we give it, and once more of the back_prog
-    root[0].score = initial_score
-    root.visit_count += 1
+    back_prog(root[0], initial_score)
+    assert (root.score == 0.), "back_prog should not update the score of the root node"
+    assert (root.visit_count == 1), "back_prog should update the visit count of the root node"
+    assert (root[0].score == initial_score), "back_prog should update the score of the non-root node"
+    assert (root[0].visit_count == 1), "back_prog should update the visit count of the non-root node"
     back_prog(root[0], reward)
-    assert (root.score == 0.)
+    back_prog(root[1], reward)
     assert (root[0].score == (initial_score + reward)/2)
+    assert (root[1].score == reward)
+    assert (root.visit_count == 3), "back_prog should update the visit count of the root node"
 
 
 ins_back_prog_recursive: List[Tuple[List[int], float]] = [([0, 0, 1], 42.), ([0, 1, 0, 1, 0, 0], 42.)]
@@ -75,11 +84,7 @@ def test_back_prog_recursive(path, reward) -> None:
     node: MCTSNode = root
     for p in path:  # Simulate selection for the path
         node.expand()
-        node.visit_count += 1
         node = node[p]
-    with pytest.raises(AssertionError):  # visit count is 0
-        back_prog(node, reward)
-    node.visit_count += 1
 
     back_prog(node, reward)
 
@@ -100,7 +105,7 @@ def test_simulate_terminal_node() -> None:
     initial_visit_count: int = node.visit_count
     result: MCTSNode = simulate(node, policy)
     assert (node == result), "simulate should return the same node if it is terminal"
-    assert (node.visit_count == initial_visit_count + 1), "simulate should increment the visit count of the terminal node"
+    assert (node.visit_count == initial_visit_count), "simulate should not increment the visit count"
 
 
 def test_simulate_unexpanded_node() -> None:
@@ -110,7 +115,7 @@ def test_simulate_unexpanded_node() -> None:
     result: MCTSNode = simulate(node, policy)
     assert (node != result), "simulate should return a different node if the initial node is not terminal"
     assert (node.is_expanded()), "simulate should expand the initial node if it is not terminal"
-    assert (node.visit_count == initial_visit_count + 1), "simulate should increment the visit count of the initial node"
+    assert (node.visit_count == initial_visit_count), "simulate should not increment the visit count"
 
 
 def test_simulate_expanded_node() -> None:
@@ -120,7 +125,7 @@ def test_simulate_expanded_node() -> None:
     initial_visit_count: int = node.visit_count
     result: MCTSNode = simulate(node, policy)
     assert (node != result), "simulate should return a different node if the initial node is not terminal"
-    assert (node.visit_count) == initial_visit_count + 1, "simulate should increment the visit count of the initial node"
+    assert (node.visit_count == initial_visit_count), "simulate should not increment the visit count"
 
 
 ######################################################################
@@ -224,33 +229,42 @@ def test_best_child_no_children() -> None:
         best_child(node, policy)
 
 
+def test_best_child_all() -> None:
+    policy: Policy = Greedy()
+    root: MCTSNode = MCTSNode(label=0, n_children=2, rank=2, score=0.)
+    root.expand()
+    root[0].score = 1.0
+    root[1].score = 0.0
+    assert (tuple(best_child_all(root, policy)) in {(0, 1), (0, 0)})
+
+
 ######################################################################
 #                     MCTS_all_step_atime                         #
 ######################################################################
-def testMCTS_all_step_atime() -> None:
+def test_MCTS_all_step_atime() -> None:
     # Mock the _all_step_MCTS function
-    with mock.patch('mcts_inference.mcts._all_step_MCTS', return_value=[1, 2, 3]) as mock_all_step_MCTS:
-        result = MCTS_all_step_atime((1, 'a', True))
-        mock_all_step_MCTS.assert_called_once_with(1, 'a', True)
-        assert result == [1, 2, 3], "MCTS_all_step_atime should return the same result as _all_step_MCTS"
+    with mock.patch('mcts_inference.mcts.MCTS_all_step_atime', return_value=[1, 2, 3]) as mock_MCTS_all_step_atime:
+        result = MCTS_all_step_atime_wrapper((1, 'a', True))
+        mock_MCTS_all_step_atime.assert_called_once_with(1, 'a', True)
+        assert result == [1, 2, 3], "MCTS_all_step_atime_wrapper should return the same result as MCTS_all_step_atime"
 
-    with mock.patch('mcts_inference.mcts._all_step_MCTS', return_value=[4, 5, 6]) as mock_all_step_MCTS:
-        result = MCTS_all_step_atime(('test', 2.5, False))
-        mock_all_step_MCTS.assert_called_once_with('test', 2.5, False)
-        assert result == [4, 5, 6], "MCTS_all_step_atime should return the same result as _all_step_MCTS"
+    with mock.patch('mcts_inference.mcts.MCTS_all_step_atime', return_value=[4, 5, 6]) as mock_MCTS_all_step_atime:
+        result = MCTS_all_step_atime_wrapper(('test', 2.5, False))
+        mock_MCTS_all_step_atime.assert_called_once_with('test', 2.5, False)
+        assert result == [4, 5, 6], "MCTS_all_step_atime_wrapper should return the same result as MCTS_all_step_atime"
 
 
 ######################################################################
 #                     MCTS_one_step_atime                         #
 ######################################################################
-def testMCTS_one_step_atime() -> None:
-    # Mock the _one_step_MCTS function
-    with mock.patch('mcts_inference.mcts._one_step_MCTS', return_value=[1, 2, 3]) as mock_one_step_MCTS:
-        result = MCTS_one_step_atime((1, 'a', True))
-        mock_one_step_MCTS.assert_called_once_with(1, 'a', True)
-        assert result == [1, 2, 3], "MCTS_one_step_atime should return the same result as _one_step_MCTS"
+def test_MCTS_one_step_atime() -> None:
+    # Mock the MCTS_one_step_atime function
+    with mock.patch('mcts_inference.mcts.MCTS_one_step_atime', return_value=[1, 2, 3]) as mock_MCTS_one_step_atime:
+        result = MCTS_one_step_atime_wrapper((1, 'a', True))
+        mock_MCTS_one_step_atime.assert_called_once_with(1, 'a', True)
+        assert result == [1, 2, 3], "MCTS_one_step_atime_wrapper should return the same result as MCTS_one_step_atime"
 
-    with mock.patch('mcts_inference.mcts._one_step_MCTS', return_value=[4, 5, 6]) as mock_one_step_MCTS:
-        result = MCTS_one_step_atime(('test', 2.5, False))
-        mock_one_step_MCTS.assert_called_once_with('test', 2.5, False)
-        assert result == [4, 5, 6], "MCTS_one_step_atime should return the same result as _one_step_MCTS"
+    with mock.patch('mcts_inference.mcts.MCTS_one_step_atime', return_value=[4, 5, 6]) as mock_MCTS_one_step_atime:
+        result = MCTS_one_step_atime_wrapper(('test', 2.5, False))
+        mock_MCTS_one_step_atime.assert_called_once_with('test', 2.5, False)
+        assert result == [4, 5, 6], "MCTS_one_step_atime_wrapper should return the same result as MCTS_one_step_atime"

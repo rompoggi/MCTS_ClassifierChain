@@ -7,7 +7,7 @@ NormOption is an enum to represent the different normalization options for the M
 """
 
 from enum import Enum
-from typing import Any, Callable
+from typing import Any, Callable, TypeVar
 import numpy as np
 import warnings
 import functools
@@ -41,16 +41,12 @@ class NormOption(Enum):
     NONE = 3
 
 
-def debug(func) -> Callable[..., Any]:
+F = TypeVar('F', bound=Callable[..., Any])  # Used for type hinting
+
+
+def debug(func: F) -> F:
     """
     Wrapper to help in debugging the MCTS algorithm
-
-    Args:
-        func (Callable[..., Any]): The function to wrap
-
-    Returns:
-        Callable[..., Any]: The wrapped function
-
     Examples:
         >>> @debug
         ... def f(x: int) -> int:
@@ -65,10 +61,10 @@ def debug(func) -> Callable[..., Any]:
         output: Any = func(*args, **kwargs)
         print(f"'{func.__name__}': {output=}")
         return output
-    return wrapper
+    return wrapper  # type: ignore
 
 
-def deprecated(func):
+def deprecated(func: F) -> F:
     """This is a decorator which can be used to mark functions
     as deprecated. It will result in a warning being emitted
     when the function is used."""
@@ -80,7 +76,7 @@ def deprecated(func):
                       stacklevel=2)
         warnings.simplefilter('default', DeprecationWarning)  # reset filter
         return func(*args, **kwargs)
-    return new_func
+    return new_func  # type: ignore
 
 
 __all__: list[str] = ['randmax', 'NormOption', 'debug', 'deprecated']
