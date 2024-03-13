@@ -99,7 +99,7 @@ def mc_simulate(node: MCNode, x, model) -> Tuple[MCNode, float]:  # pragma: no c
     return node, p
 
 
-def _MC(x, model, config, get_root: List[MCNode] = []) -> list[int]:  # pragma: no cover
+def _MCC(x, model, config) -> list[int]:  # pragma: no cover
     n_classes: int = config.n_classes
     ComputationalConstraint: Constraint = config.constraint
 
@@ -115,44 +115,40 @@ def _MC(x, model, config, get_root: List[MCNode] = []) -> list[int]:  # pragma: 
             best_score = score
             best_child = node.get_parent_labels()
 
-    get_root.append(root)
     return best_child
 
 
-def MC_wrapper(args) -> list[int]:
-    return _MC(*args)
+def MCC_wrapper(args) -> list[int]:
+    return _MCC(*args)
 
 
-def MC(X, model, config, get_root: List[MCNode] = []) -> Any:  # pragma: no cover
+def MCC(x, model, config) -> Any:  # pragma: no cover
     """
-    Monte Carlo Tree Search alogrithm.
+    Monte Carlo CC (MCC) alogrithm.
 
     Args:
-        model (Any): The model to use for the MCTS algorithm
         x (Any): The input data
-        verbose (bool): If True, the constraints will print a message when they are reached
-        secs (float): The time constraint in seconds
-        visualize (bool): If True, the search tree will be visualized
-
+        model (Any): The model to use for the MCC algorithm
+        config (Any): The configuration for the MCC algorithm
     Returns:
         list[int]: The labels of the best child of the root node following a greedy policy
     """
-    X = np.atleast_2d(X)
+    X = np.atleast_2d(x)
 
     if config.parallel:
         with mp.Pool(mp.cpu_count()) as pool:
             if config.verbose:
-                out = list(tqdm(pool.imap(MC_wrapper, [(x, model, config) for x in X]), total=len(X)))
+                out = list(tqdm(pool.imap(MCC_wrapper, [(x, model, config) for x in X]), total=len(X)))
             else:
-                out = pool.map(MC_wrapper, [(x, model, config) for x in X])
+                out = pool.map(MCC_wrapper, [(x, model, config) for x in X])
 
     else:
         if config.verbose:
-            out = [_MC(x, model, config, get_root=get_root) for x in tqdm(X, total=len(X))]
+            out = [_MCC(x, model, config) for x in tqdm(X, total=len(X))]
         else:
-            out = [_MC(x, model, config, get_root=get_root) for x in X]
+            out = [_MCC(x, model, config) for x in X]
 
     return np.atleast_2d(out)
 
 
-__all__: list[str] = ["MCNode", "MC"]
+__all__: list[str] = ["MCNode", "MCC"]

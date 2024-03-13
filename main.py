@@ -2,7 +2,7 @@ from mcts_inference.constraints import Constraint
 from mcts_inference.mcts import MCTS
 from mcts_inference.mcts_config import MCTSConfig
 from mcts_inference.policy import UCB
-from mcts_inference.mc import MC
+from mcts_inference.mc import MCC
 from mcts_inference.brute_force import brute_force as BF
 
 
@@ -10,8 +10,8 @@ def main():
     from sklearn.datasets import make_multilabel_classification
     from sklearn.model_selection import train_test_split
     n_samples = 1000
-    n_features = 40
-    n_classes = 20
+    n_features = 8
+    n_classes = 8
     n_labels = 2
     random_state = 0
 
@@ -34,16 +34,16 @@ def main():
     chain = ClassifierChain(base)
 
     M: int = 100
-    n_iter = 1000
+    n_iter = 100
 
     chain: ClassifierChain = chain.fit(X_train, Y_train)
     Yc = chain.predict(X_test[:M])
 
-    config = MCTSConfig(n_classes=n_classes, selection_policy=UCB(2), constraint=Constraint(max_iter=True, n_iter=n_iter), verbose=True)
+    config = MCTSConfig(n_classes=n_classes, selection_policy=UCB(0.5), constraint=Constraint(max_iter=True, n_iter=n_iter), verbose=True)
     Ymcts = MCTS(X_test[:M], chain, config=config)
 
     config = MCTSConfig(n_classes=n_classes, selection_policy=UCB(2), constraint=Constraint(max_iter=True, n_iter=n_iter), verbose=True)
-    Ymc = MC(X_test[:M], chain, config=config)
+    Ymc = MCC(X_test[:M], chain, config=config)
 
     config = MCTSConfig(n_classes=n_classes, selection_policy=UCB(2) ,constraint=Constraint(max_iter=True, n_iter=n_iter), step_once=False, verbose=True)
     Ym1cts = MCTS(X_test[:M], chain, config=config)
@@ -59,7 +59,7 @@ def main():
     print(f"{loss(Ymc, Y_test[:M])=}")
     print(f"{loss(Ym1cts, Y_test[:M])=}")
     print(f"{loss(Ybf, Y_test[:M])=}")
-
+    print()
     loss = zero_one_loss
     print(f"{loss(Yc, Y_test[:M])=}")
     print(f"{loss(Ymcts, Y_test[:M])=}")

@@ -3,7 +3,7 @@ from unittest import mock
 
 import numpy as np
 
-from mcts_inference.mc import MCNode, MC_wrapper
+from mcts_inference.mc import MCNode, MCC_wrapper
 
 
 def test_MCNode() -> None:
@@ -47,12 +47,12 @@ def test_is_fully_expanded() -> None:
 
 
 def test_MC_wrapper() -> None:
-    with mock.patch('mcts_inference.mc._MC', return_value=[1, 2, 3]) as mock_MC:
-        result = MC_wrapper((1, 'a', True))
+    with mock.patch('mcts_inference.mc._MCC', return_value=[1, 2, 3]) as mock_MC:
+        result = MCC_wrapper((1, 'a', True))
         mock_MC.assert_called_once_with(1, 'a', True)
-        assert result == [1, 2, 3], "MC_wrapper should return the same result as _MC"
+        assert result == [1, 2, 3], "MC_wrapper should return the same result as _MCC"
 
-    with mock.patch('mcts_inference.mc._MC', return_value=[4, 5, 6]) as mock_MC:
-        result = MC_wrapper(('test', 2.5, False))
+    with mock.patch('mcts_inference.mc._MCC', return_value=[4, 5, 6]) as mock_MC:
+        result = MCC_wrapper(('test', 2.5, False))
         mock_MC.assert_called_once_with('test', 2.5, False)
-        assert result == [4, 5, 6], "MC_wrapper should return the same result as _MC"
+        assert result == [4, 5, 6], "MC_wrapper should return the same result as _MCC"
