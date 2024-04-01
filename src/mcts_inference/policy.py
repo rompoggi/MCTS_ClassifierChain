@@ -47,7 +47,6 @@ Thompson_Sampling(a=1., b=1.)
 import numpy as np
 from typing import Any
 
-from .mcts_node import MCTSNode
 from .utils import randmax
 
 
@@ -55,7 +54,7 @@ class Policy:
     def __init__(self) -> None:
         pass
 
-    def __call__(self, node: MCTSNode) -> int:
+    def __call__(self, node) -> int:
         raise NotImplementedError("Policy.__call__ method not implemented.")
 
     def name(self) -> str:
@@ -78,7 +77,7 @@ class Uniform(Policy):
     def __init__(self) -> None:
         super().__init__()
 
-    def __call__(self, node: MCTSNode) -> int:
+    def __call__(self, node) -> int:
         """
         Uniform policy to select the next node to visit.
 
@@ -94,7 +93,7 @@ class Uniform(Policy):
              >>> uniform(node)
             1
         """
-        return np.random.choice(node.n_children)
+        return np.random.choice(a=node.n_children)  # type: ignore
 
     def name(self) -> str:
         return "Uniform"
@@ -116,7 +115,7 @@ class Greedy(Policy):
     def __init__(self) -> None:
         super().__init__()
 
-    def __call__(self, node: MCTSNode) -> int:
+    def __call__(self, node) -> int:
         """
         Greedy policy to select the next node to visit.
 
@@ -158,7 +157,7 @@ class EpsGreedy(Policy):
         assert (epsilon >= 0 and epsilon <= 1), f"{epsilon = } should be in the [0,1] range."
         self.epsilon: float = epsilon
 
-    def __call__(self, node: MCTSNode) -> int:
+    def __call__(self, node) -> int:
         """
         Epislon-Greedy policy to select the next node to visit.
 
@@ -174,7 +173,7 @@ class EpsGreedy(Policy):
         1
         """
         if np.random.rand() <= self.epsilon:  # explore
-            return np.random.choice(node.n_children)
+            return np.random.choice(a=node.n_children)  # type: ignore
         return randmax(node.get_children_scores())
 
     def name(self) -> str:
@@ -199,7 +198,7 @@ class UCB(Policy):
         super().__init__()
         self.alpha: float = alpha
 
-    def __call__(self, node: MCTSNode) -> int:
+    def __call__(self, node) -> int:
         """
         Upper Confidence Bound (UCB) policy to select the next node to visit.
 
@@ -249,7 +248,7 @@ class Thompson_Sampling(Policy):
         self.a: float = a
         self.b: float = b
 
-    def __call__(self, node: MCTSNode) -> int:
+    def __call__(self, node) -> int:
         """
         Thompson Sampling policy to select the next node to visit.
 

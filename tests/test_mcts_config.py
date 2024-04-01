@@ -3,7 +3,6 @@ Tests for the MCTSConfig class.
 """
 
 import pytest
-
 import os
 import tempfile
 

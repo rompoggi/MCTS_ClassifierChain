@@ -5,8 +5,6 @@ The algorithm may not converge but it is guaranteed to find the best label combi
 It may not however always find the exact label, as the classifier's error will propagate through the chain.
 """
 
-from .mcts_config import MCTSConfig
-
 import numpy as np
 from typing import Tuple, Any
 import threading
@@ -14,8 +12,10 @@ from datetime import datetime, timedelta
 import multiprocessing as mp
 from tqdm import tqdm
 
+from .mcts_config import MCTSConfig
 
-def BF(x, model, config: MCTSConfig) -> Any:  # pragma: no cover
+
+def _PCC(x, model, config: MCTSConfig) -> Any:  # pragma: no cover
     """
     Brute force algorithm to find the best label combination.
 
@@ -73,11 +73,11 @@ def BF(x, model, config: MCTSConfig) -> Any:  # pragma: no cover
         return -1 * np.ones(config.n_classes)
 
 
-def BF_wrapper(args) -> Any:
-    return BF(*args)
+def PCC_wrapper(args) -> Any:
+    return _PCC(*args)
 
 
-def brute_force(x, model, config: MCTSConfig) -> Any:  # pragma: no cover
+def PCC(x, model, config: MCTSConfig) -> Any:  # pragma: no cover
     """
     Brute force algorithm to find the best label combination.
 
@@ -97,17 +97,17 @@ def brute_force(x, model, config: MCTSConfig) -> Any:  # pragma: no cover
     if config.parallel:
         with mp.Pool(mp.cpu_count()) as pool:
             if config.verbose:
-                out = list(tqdm(pool.imap(BF_wrapper, [(x, model, config) for x in X]), total=len(X)))
+                out = list(tqdm(pool.imap(PCC_wrapper, [(x, model, config) for x in X]), total=len(X)))
             else:
-                out = pool.map(BF_wrapper, [(x, model, config) for x in X])
+                out = pool.map(PCC_wrapper, [(x, model, config) for x in X])
 
     else:
         if config.verbose:
-            out = [BF(x, model, config) for x in tqdm(X, total=len(X))]
+            out = [_PCC(x, model, config) for x in tqdm(X, total=len(X))]
         else:
-            out = [BF(x, model, config) for x in X]
+            out = [_PCC(x, model, config) for x in X]
 
     return np.atleast_2d(out)
 
 
-__all__: list[str] = ["brute_force"]
+__all__: list[str] = ["PCC"]

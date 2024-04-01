@@ -3,8 +3,9 @@ Test file for the utils module.
 """
 
 import pytest
-from mcts_inference.utils import randmax, NormOption, debug, deprecated
 from typing import Any
+
+from mcts_inference.utils import randmax, NormOption, debug, deprecated
 
 
 # Randmax function tests

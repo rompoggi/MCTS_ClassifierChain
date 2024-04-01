@@ -2,9 +2,10 @@
 Test file for the constraints module.
 """
 
-from mcts_inference.constraints import Constraint
 from math import inf
 import pytest
+
+from mcts_inference.constraints import Constraint
 
 
 def test_constraint_initialization_off() -> None:

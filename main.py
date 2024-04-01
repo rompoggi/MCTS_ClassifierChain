@@ -1,9 +1,9 @@
 from mcts_inference.constraints import Constraint
-from mcts_inference.mcts import MCTS
 from mcts_inference.mcts_config import MCTSConfig
 from mcts_inference.policy import UCB
-from mcts_inference.mc import MCC
-from mcts_inference.brute_force import brute_force as BF
+from mcts_inference.mcts import MCTS
+from mcts_inference.mcc import MCC
+from mcts_inference.pcc import PCC
 
 
 def main():
@@ -49,7 +49,7 @@ def main():
     Ym1cts = MCTS(X_test[:M], chain, config=config)
 
     config = MCTSConfig(n_classes=n_classes, selection_policy=UCB(2) ,constraint=Constraint(time=True, d_time=3.), verbose=True)
-    Ybf = BF(X_test[:M], chain, config=config)
+    Ypcc = PCC(X_test[:M], chain, config=config)
 
     from sklearn.metrics import hamming_loss, zero_one_loss
 
@@ -58,14 +58,14 @@ def main():
     print(f"{loss(Ymcts, Y_test[:M])=}")
     print(f"{loss(Ymc, Y_test[:M])=}")
     print(f"{loss(Ym1cts, Y_test[:M])=}")
-    print(f"{loss(Ybf, Y_test[:M])=}")
+    print(f"{loss(Ypcc, Y_test[:M])=}")
     print()
     loss = zero_one_loss
     print(f"{loss(Yc, Y_test[:M])=}")
     print(f"{loss(Ymcts, Y_test[:M])=}")
     print(f"{loss(Ymc, Y_test[:M])=}")
     print(f"{loss(Ym1cts, Y_test[:M])=}")
-    print(f"{loss(Ybf, Y_test[:M])=}")
+    print(f"{loss(Ypcc, Y_test[:M])=}")
 
 if __name__ == "__main__":  # pragma: no cover
     main()

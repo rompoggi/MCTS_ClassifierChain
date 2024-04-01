@@ -1,5 +1,26 @@
 """
-File to store the configuration of the MCTS algorithm.
+This module defines the MCTSConfig class which represents the configuration for the Monte Carlo Tree Search (MCTS) algorithm.
+
+The MCTSConfig class allows users to specify various parameters and policies for the MCTS algorithm, such as the number of classes,
+time constraint, selection policy, exploration policy, best child policy, normalization options, parallel execution, verbosity, and more.
+
+Example usage:
+    config = MCTSConfig(n_classes=2, constraint=Constraint(time=True, d_time=1.0))
+    config.selection_policy = EpsGreedy(epsilon=0.2)
+    config.exploration_policy = Uniform()
+    config.best_child_policy = Greedy()
+    config.normalize_scores = False
+    config.parallel = True
+    config.verbose = False
+
+    # Save the configuration to a file
+    config.save_config('/path/to/config.json')
+
+    # Load the configuration from a file
+    config.load_config('/path/to/config.json')
+
+    # Print the configuration
+    print(config)
 """
 
 from typing import Dict, Optional, Any
@@ -33,7 +54,25 @@ class MCTSConfig:
                  path: Optional[str] = None,
                  format='json',
                  ) -> None:
+        """
+        Initializes a new instance of the MCTSConfig class.
 
+        Args:
+            n_classes (int, optional): The number of classes. Defaults to 2.
+            constraint (Constraint, optional): The time constraint for the MCTS algorithm. Defaults to Constraint(time=True, d_time=1.0).
+            selection_policy (Policy, optional): The selection policy for MCTS. Defaults to EpsGreedy(epsilon=0.2).
+            exploration_policy (Policy, optional): The exploration policy for MCTS. Defaults to Uniform().
+            best_child_policy (Policy, optional): The best child policy for MCTS. Defaults to Greedy().
+            normalize_scores (bool, optional): Whether to normalize scores. Defaults to False.
+            normalization_option (NormOption, optional): The normalization option for scores. Defaults to None.
+            step_once (bool, optional): Whether to perform MCTS in a step-by-step manner. Defaults to True.
+            parallel (bool, optional): Whether to perform MCTS in parallel. Defaults to True.
+            verbose (bool, optional): Whether to print verbose output. Defaults to False.
+            visualize_tree_graph (bool, optional): Whether to visualize the MCTS tree graph. Defaults to False.
+            save_tree_graph (bool, optional): Whether to save the MCTS tree graph. Defaults to False.
+            path (str, optional): The path to load/save the configuration. Defaults to None.
+            format (str, optional): The format to load/save the configuration. Only 'json' is supported. Defaults to 'json'.
+        """
         if path is not None:
             self.load_config(path, format)
             return

@@ -1,3 +1,30 @@
+"""
+This module contains the Constraint class used for handling time and iteration constraints in the MCTS algorithm.
+
+The Constraint class provides functionality to stop the search when either the time or iteration constraints are reached.
+It allows users to set the time constraint in seconds and the iteration constraint as the maximum number of iterations.
+The class also supports verbose mode, which prints messages when the constraints are reached.
+
+Example usage:
+    c = Constraint(time=True, d_time=1., max_iter=False, n_iter=0, verbose=True)
+    bool(c)  # Returns True
+
+    c = Constraint(time=False, d_time=1., max_iter=True, n_iter=100, verbose=True)
+    bool(c)  # Returns True
+
+    c = Constraint(time=True, d_time=1., max_iter=True, n_iter=100, verbose=True)
+    bool(c)  # Returns True
+
+    c.curr_iter == 1  # Returns True
+
+    c = Constraint(time=False, d_time=1., max_iter=False, n_iter=0, verbose=True)
+    # Raises AssertionError: At least time=False or max_iter=False should be True
+
+Classes:
+    Constraint: Class to handle time and iteration constraints.
+
+"""
+
 from time import time
 from typing import Any
 
@@ -40,6 +67,7 @@ class Constraint:
         >>> c = Constraint(time=False, d_time=1., max_iter=False, n_iter=0, verbose=True)
         AssertionError: At least time=False or max_iter=False should be True
     """
+
     def __init__(self, time: bool = False, max_iter: bool = False, d_time: float = 1., n_iter: int = 100, verbose: bool = False) -> None:
         assert (time or max_iter), f"At least {time=} or {max_iter=} should be True"
         assert ((not max_iter) or (isinstance(n_iter, int) and n_iter > 0)), f"{n_iter=} should be positive if {max_iter=}"

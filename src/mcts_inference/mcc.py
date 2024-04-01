@@ -5,12 +5,12 @@ See Efficient Monte Carlo Methods for Multi-Dimensional Learning with Classifier
 Jesse Read, Luca Martino, David Luengo for more information. https://arxiv.org/abs/1211.2190
 """
 
-from .constraints import Constraint
-
 from typing import List, Tuple, Optional, Any, TypeVar
 import multiprocessing as mp
 import numpy as np
 from tqdm import tqdm
+
+from .constraints import Constraint
 
 
 T = TypeVar('T', bound='MCNode')  # Define the type now to not have an issue with recursive typing
@@ -118,8 +118,29 @@ def _MCC(x, model, config) -> list[int]:  # pragma: no cover
     return best_child
 
 
+def _MCC_(x, model, n_iter) -> list[int]:  # pragma: no cover
+    n_classes: int = len(model.estimators_)
+
+    root: MCNode = MCNode(label=None, n_children=2, rank=n_classes, score=1.)
+
+    best_score: float = - np.inf
+    best_child: List[int] = [0] * n_classes
+
+    for _ in range(n_iter):
+        node, score = mc_simulate(root, x, model)
+        if score > best_score:
+            best_score = score
+            best_child = node.get_parent_labels()
+
+    return best_child
+
+
 def MCC_wrapper(args) -> list[int]:
     return _MCC(*args)
+
+
+def MCC_wrapper_(args) -> list[int]:
+    return _MCC_(*args)
 
 
 def MCC(x, model, config) -> Any:  # pragma: no cover
@@ -147,6 +168,40 @@ def MCC(x, model, config) -> Any:  # pragma: no cover
             out = [_MCC(x, model, config) for x in tqdm(X, total=len(X))]
         else:
             out = [_MCC(x, model, config) for x in X]
+
+    return np.atleast_2d(out)
+
+
+def MCC_(x, model, n_iter: int, progress_bar: bool, n_jobs: int = 1) -> Any:  # pragma: no cover
+    """
+    Monte Carlo CC (MCC) alogrithm.
+
+    Args:
+        x (Any): The input data
+        model (Any): The model to use for the MCC algorithm
+        n_iter (int): The number of iterations to run the MCC algorithm
+        progress_bar (bool): Whether to display a progress bar
+        n_jobs (int): The number of jobs to use for parallel processing
+    Returns:
+        list[int]: The labels of the best child of the root node following a greedy policy
+    """
+    X = np.atleast_2d(x)
+
+    if n_jobs != 1:
+        if n_jobs == -1:
+            n_jobs = mp.cpu_count()
+        n_jobs = min(n_jobs, mp.cpu_count())
+        with mp.Pool(n_jobs) as pool:
+            if progress_bar:
+                out = list(tqdm(pool.imap(MCC_wrapper_, [(x, model, n_iter) for x in X]), total=len(X)))
+            else:
+                out = pool.map(MCC_wrapper_, [(x, model, n_iter) for x in X])
+
+    else:
+        if progress_bar:
+            out = [_MCC_(x, model, n_iter) for x in tqdm(X, total=len(X))]
+        else:
+            out = [_MCC_(x, model, n_iter) for x in X]
 
     return np.atleast_2d(out)
 

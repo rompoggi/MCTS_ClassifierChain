@@ -1,9 +1,16 @@
 """
-Utility functions and classes for the MCTS algorithm.
+This module contains utility functions and classes for the MCTS algorithm.
 
-Debug is a wrapper to help in debugging any function
+The MCTS algorithm is a Monte Carlo Tree Search algorithm used for decision making in artificial intelligence.
+It is commonly used in games and other domains where the search space is large and complex.
 
-NormOption is an enum to represent the different normalization options for the MCTS algorithm.
+This module provides the following functions and classes:
+- randmax: A function to return the index of the element with the highest value in an array, breaking ties randomly.
+- NormOption: An enumeration class representing the different normalization options for the MCTS algorithm.
+- debug: A decorator to help in debugging the MCTS algorithm.
+- deprecated: A decorator to mark functions as deprecated.
+
+Please refer to the individual function and class docstrings for more information on their usage.
 """
 
 from enum import Enum

@@ -3,9 +3,10 @@ Test file for the policy module.
 """
 
 import pytest
-from mcts_inference.mcts_node import MCTSNode
-from mcts_inference.policy import Policy, Uniform, Greedy, EpsGreedy, UCB, Thompson_Sampling
 import numpy as np
+
+from mcts_inference.mcts import MCTSNode
+from mcts_inference.policy import Policy, Uniform, Greedy, EpsGreedy, UCB, Thompson_Sampling
 
 
 ######################################################################
